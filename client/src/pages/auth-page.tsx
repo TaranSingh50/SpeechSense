@@ -9,16 +9,27 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
-import { registerSchema, loginSchema, RegisterUser, LoginUser } from "@shared/schema";
-import { Redirect } from "wouter";
-import { Loader2, Heart, Mic } from "lucide-react";
+import { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema, RegisterUser, LoginUser, ForgotPasswordUser, ResetPasswordUser } from "@shared/schema";
+import { Redirect, useLocation } from "wouter";
+import { Loader2, Heart, Mic, ArrowLeft } from "lucide-react";
 
 export default function AuthPage() {
-  const { user, loginMutation, registerMutation } = useAuth();
+  const { user, loginMutation, registerMutation, forgotPasswordMutation, resetPasswordMutation } = useAuth();
+  const [location] = useLocation();
+  const [activeView, setActiveView] = useState<"auth" | "forgot" | "reset">("auth");
+
+  // Check if there's a reset token in the URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const resetToken = urlParams.get("token");
 
   // Redirect if already logged in
   if (user) {
     return <Redirect to="/" />;
+  }
+
+  // If there's a reset token, show reset password form
+  if (resetToken && activeView === "auth") {
+    setActiveView("reset");
   }
 
   return (
@@ -38,20 +49,30 @@ export default function AuthPage() {
             </p>
           </div>
 
-          <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="register">Register</TabsTrigger>
-            </TabsList>
+          {activeView === "auth" && (
+            <Tabs defaultValue="login" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="login">Login</TabsTrigger>
+                <TabsTrigger value="register">Register</TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="login">
-              <LoginForm />
-            </TabsContent>
+              <TabsContent value="login">
+                <LoginForm onForgotPassword={() => setActiveView("forgot")} />
+              </TabsContent>
 
-            <TabsContent value="register">
-              <RegisterForm />
-            </TabsContent>
-          </Tabs>
+              <TabsContent value="register">
+                <RegisterForm />
+              </TabsContent>
+            </Tabs>
+          )}
+
+          {activeView === "forgot" && (
+            <ForgotPasswordForm onBack={() => setActiveView("auth")} />
+          )}
+
+          {activeView === "reset" && resetToken && (
+            <ResetPasswordForm token={resetToken} onBack={() => setActiveView("auth")} />
+          )}
         </div>
       </div>
 
@@ -114,7 +135,7 @@ export default function AuthPage() {
   );
 }
 
-function LoginForm() {
+function LoginForm({ onForgotPassword }: { onForgotPassword: () => void }) {
   const { loginMutation } = useAuth();
 
   const form = useForm<LoginUser>({
@@ -190,6 +211,16 @@ function LoginForm() {
                 "Sign in"
               )}
             </Button>
+            
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={onForgotPassword}
+                className="text-sm text-blue-600 hover:text-blue-500 underline"
+              >
+                Forgot your password?
+              </button>
+            </div>
           </form>
         </Form>
       </CardContent>
@@ -348,6 +379,184 @@ function RegisterForm() {
                 </>
               ) : (
                 "Create account"
+              )}
+            </Button>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ForgotPasswordForm({ onBack }: { onBack: () => void }) {
+  const { forgotPasswordMutation } = useAuth();
+
+  const form = useForm<ForgotPasswordUser>({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: {
+      email: "",
+    },
+  });
+
+  const onSubmit = (data: ForgotPasswordUser) => {
+    forgotPasswordMutation.mutate(data, {
+      onSuccess: () => {
+        // Stay on the form to show success message
+        form.reset();
+      },
+    });
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onBack}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <div>
+            <CardTitle>Reset your password</CardTitle>
+            <CardDescription>
+              Enter your email address and we'll send you a link to reset your password
+            </CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="email"
+                      placeholder="your@email.com"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={forgotPasswordMutation.isPending}
+            >
+              {forgotPasswordMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending reset link...
+                </>
+              ) : (
+                "Send reset link"
+              )}
+            </Button>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ResetPasswordForm({ token, onBack }: { token: string; onBack: () => void }) {
+  const { resetPasswordMutation } = useAuth();
+
+  const form = useForm<ResetPasswordUser>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: {
+      token,
+      password: "",
+      confirmPassword: "",
+    },
+  });
+
+  const onSubmit = (data: ResetPasswordUser) => {
+    resetPasswordMutation.mutate(data, {
+      onSuccess: () => {
+        // Go back to auth after successful reset
+        onBack();
+      },
+    });
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onBack}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <div>
+            <CardTitle>Set new password</CardTitle>
+            <CardDescription>
+              Enter your new password below
+            </CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>New Password</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="password"
+                      placeholder="Enter new password"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="confirmPassword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Confirm New Password</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="password"
+                      placeholder="Confirm new password"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={resetPasswordMutation.isPending}
+            >
+              {resetPasswordMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Resetting password...
+                </>
+              ) : (
+                "Reset password"
               )}
             </Button>
           </form>

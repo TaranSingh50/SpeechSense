@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authService } from "../auth";
-import { registerSchema, loginSchema } from "@shared/schema";
+import { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from "@shared/schema";
 import { z } from "zod";
 
 const router = Router();
@@ -174,6 +174,86 @@ router.get("/user", async (req, res) => {
     console.error("Get user error:", error);
     res.status(401).json({
       message: "Invalid or expired token",
+    });
+  }
+});
+
+// Forgot password endpoint
+router.post("/forgot-password", async (req, res) => {
+  try {
+    // Validate request body
+    const validatedData = forgotPasswordSchema.parse(req.body);
+    
+    // Generate reset token
+    const resetToken = await authService.requestPasswordReset(validatedData.email);
+    
+    // In a real application, you would send this token via email
+    // For now, we'll return it (remove this in production!)
+    res.json({
+      message: "If this email exists, a password reset link has been sent",
+      // TODO: Remove this in production - only for development/testing
+      resetToken: process.env.NODE_ENV === "development" ? resetToken : undefined,
+    });
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        message: "Validation error",
+        errors: error.errors,
+      });
+    }
+    
+    // Always return the same message for security
+    res.json({
+      message: "If this email exists, a password reset link has been sent",
+    });
+  }
+});
+
+// Reset password endpoint
+router.post("/reset-password", async (req, res) => {
+  try {
+    // Validate request body
+    const validatedData = resetPasswordSchema.parse(req.body);
+    
+    // Reset password
+    await authService.resetPassword(validatedData.token, validatedData.password);
+    
+    res.json({
+      message: "Password has been reset successfully. Please log in with your new password.",
+    });
+  } catch (error) {
+    console.error("Reset password error:", error);
+    
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        message: "Validation error",
+        errors: error.errors,
+      });
+    }
+    
+    res.status(400).json({
+      message: error instanceof Error ? error.message : "Password reset failed",
+    });
+  }
+});
+
+// Verify reset token endpoint
+router.get("/verify-reset-token/:token", async (req, res) => {
+  try {
+    const { token } = req.params;
+    const isValid = await authService.verifyResetToken(token);
+    
+    res.json({
+      valid: isValid,
+      message: isValid ? "Token is valid" : "Token is invalid or expired",
+    });
+  } catch (error) {
+    console.error("Verify reset token error:", error);
+    res.status(400).json({
+      valid: false,
+      message: "Token verification failed",
     });
   }
 });

@@ -4,7 +4,7 @@ import {
   useMutation,
   UseMutationResult,
 } from "@tanstack/react-query";
-import { User, RegisterUser, LoginUser } from "@shared/schema";
+import { User, RegisterUser, LoginUser, ForgotPasswordUser, ResetPasswordUser } from "@shared/schema";
 import { apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -15,6 +15,8 @@ type AuthContextType = {
   loginMutation: UseMutationResult<LoginResponse, Error, LoginUser>;
   logoutMutation: UseMutationResult<void, Error, void>;
   registerMutation: UseMutationResult<RegisterResponse, Error, RegisterUser>;
+  forgotPasswordMutation: UseMutationResult<ForgotPasswordResponse, Error, ForgotPasswordUser>;
+  resetPasswordMutation: UseMutationResult<ResetPasswordResponse, Error, ResetPasswordUser>;
 };
 
 type LoginResponse = {
@@ -27,6 +29,15 @@ type RegisterResponse = {
   message: string;
   user: Omit<User, 'password'>;
   accessToken: string;
+};
+
+type ForgotPasswordResponse = {
+  message: string;
+  resetToken?: string; // Only in development
+};
+
+type ResetPasswordResponse = {
+  message: string;
 };
 
 export const AuthContext = createContext<AuthContextType | null>(null);
@@ -162,6 +173,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
+  const forgotPasswordMutation = useMutation({
+    mutationFn: async (data: ForgotPasswordUser): Promise<ForgotPasswordResponse> => {
+      const res = await apiRequest("POST", "/api/auth/forgot-password", data);
+      return await res.json();
+    },
+    onSuccess: (data: ForgotPasswordResponse) => {
+      toast({
+        title: "Password reset requested",
+        description: data.message,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Password reset failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const resetPasswordMutation = useMutation({
+    mutationFn: async (data: ResetPasswordUser): Promise<ResetPasswordResponse> => {
+      const res = await apiRequest("POST", "/api/auth/reset-password", data);
+      return await res.json();
+    },
+    onSuccess: (data: ResetPasswordResponse) => {
+      toast({
+        title: "Password reset successful",
+        description: data.message,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Password reset failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Set up authorization header for API requests
   useEffect(() => {
     const accessToken = localStorage.getItem("accessToken");
@@ -190,6 +241,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loginMutation,
         logoutMutation,
         registerMutation,
+        forgotPasswordMutation,
+        resetPasswordMutation,
       }}
     >
       {children}

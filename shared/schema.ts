@@ -194,12 +194,27 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().email("Please enter a valid email"),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1, "Reset token is required"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  confirmPassword: z.string().min(1, "Please confirm your password"),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
 // Types
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type RegisterUser = z.infer<typeof registerSchema>;
 export type LoginUser = z.infer<typeof loginSchema>;
+export type ForgotPasswordUser = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordUser = z.infer<typeof resetPasswordSchema>;
 
 export type AuthToken = typeof authTokens.$inferSelect;
 export type InsertAuthToken = z.infer<typeof insertAuthTokenSchema>;

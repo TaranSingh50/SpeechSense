@@ -2,7 +2,7 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import jwt from "jsonwebtoken";
 import { storage } from "./storage";
-import { User, RegisterUser, LoginUser } from "@shared/schema";
+import { User, RegisterUser, LoginUser, ForgotPasswordUser, ResetPasswordUser } from "@shared/schema";
 
 const scryptAsync = promisify(scrypt);
 
@@ -10,6 +10,7 @@ const scryptAsync = promisify(scrypt);
 const JWT_SECRET = process.env.JWT_SECRET || "your-jwt-secret-key";
 const JWT_EXPIRES_IN = "7d";
 const REFRESH_TOKEN_EXPIRES_DAYS = 30;
+const PASSWORD_RESET_EXPIRES_HOURS = 1; // 1 hour to reset password
 
 export class AuthService {
   // Hash password using scrypt
@@ -179,6 +180,74 @@ export class AuthService {
 
     const user = await storage.getUser(payload.userId);
     return user || null;
+  }
+
+  // Request password reset - generates and stores reset token
+  async requestPasswordReset(email: string): Promise<string> {
+    const user = await storage.getUserByEmail(email);
+    if (!user) {
+      // Don't reveal if email exists - but still generate token for security
+      throw new Error("If this email exists, a password reset link has been sent");
+    }
+
+    // Generate secure reset token
+    const resetToken = this.generateRandomToken();
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + PASSWORD_RESET_EXPIRES_HOURS);
+
+    // Clean up any existing password reset tokens for this user
+    const existingTokens = await storage.getTokensByUserId(user.id, "password_reset");
+    for (const token of existingTokens) {
+      await storage.deleteAuthToken(token.token);
+    }
+
+    // Store new reset token
+    await storage.createAuthToken({
+      userId: user.id,
+      token: resetToken,
+      type: "password_reset",
+      expiresAt,
+    });
+
+    return resetToken;
+  }
+
+  // Reset password using reset token
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    // Find and validate reset token
+    const tokenRecord = await storage.getAuthToken(token);
+    if (!tokenRecord || tokenRecord.type !== "password_reset") {
+      throw new Error("Invalid or expired reset token");
+    }
+
+    // Get user
+    const user = await storage.getUser(tokenRecord.userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Hash new password
+    const hashedPassword = await this.hashPassword(newPassword);
+
+    // Update user password
+    await storage.updateUser(user.id, {
+      password: hashedPassword,
+    });
+
+    // Delete the reset token (one-time use)
+    await storage.deleteAuthToken(token);
+
+    // Invalidate all existing refresh tokens for security
+    const refreshTokens = await storage.getTokensByUserId(user.id, "refresh");
+    for (const refreshToken of refreshTokens) {
+      await storage.deleteAuthToken(refreshToken.token);
+    }
+  }
+
+  // Verify reset token (for frontend validation)
+  async verifyResetToken(token: string): Promise<boolean> {
+    const tokenRecord = await storage.getAuthToken(token);
+    return tokenRecord?.type === "password_reset" && tokenRecord.expiresAt > new Date();
   }
 
   // Clean expired tokens (should be run periodically)
