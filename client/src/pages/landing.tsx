@@ -22,7 +22,7 @@ export default function Landing() {
               onClick={() => window.location.href = '/api/login'}
               className="bg-medical-teal hover:bg-medical-teal/90"
             >
-              Sign In Securely
+              Sign In / Register
             </Button>
           </div>
         </div>
@@ -45,7 +45,7 @@ export default function Landing() {
                 onClick={() => window.location.href = '/api/login'}
                 className="bg-medical-teal hover:bg-medical-teal/90"
               >
-                Get Started
+                Get Started - Sign In / Register
               </Button>
               <Button 
                 size="lg" 
@@ -54,6 +54,14 @@ export default function Landing() {
               >
                 Learn More
               </Button>
+            </div>
+            
+            {/* Authentication Info */}
+            <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <p className="text-sm text-professional-grey">
+                <strong>New users:</strong> Clicking "Get Started" will automatically create your secure account.<br/>
+                <strong>Password recovery:</strong> Use your Replit account settings for password management.
+              </p>
             </div>
           </div>
         </div>
@@ -137,8 +145,48 @@ export default function Landing() {
             onClick={() => window.location.href = '/api/login'}
             className="bg-white text-medical-teal hover:bg-gray-100"
           >
-            Start Your Clinical Dashboard
+            Access Your Clinical Dashboard
           </Button>
+        </div>
+      </section>
+
+      {/* Authentication Information Section */}
+      <section className="py-12 bg-gray-50">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h3 className="text-2xl font-heading font-bold text-professional-grey text-center mb-8">
+            Secure Access & Account Management
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <Card>
+              <CardContent className="p-6">
+                <h4 className="font-semibold text-professional-grey mb-3">New Users - Easy Registration</h4>
+                <p className="text-gray-600 text-sm mb-4">
+                  No complex signup forms needed. When you click "Sign In / Register", 
+                  new users are automatically registered through our secure authentication system.
+                </p>
+                <ul className="text-sm text-gray-600 space-y-1">
+                  <li>• One-click account creation</li>
+                  <li>• Secure professional authentication</li>
+                  <li>• HIPAA-compliant data protection</li>
+                </ul>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6">
+                <h4 className="font-semibold text-professional-grey mb-3">Password Recovery & Security</h4>
+                <p className="text-gray-600 text-sm mb-4">
+                  Password recovery and account security are managed through your 
+                  secure Replit account settings with enterprise-grade protection.
+                </p>
+                <ul className="text-sm text-gray-600 space-y-1">
+                  <li>• Self-service password reset</li>
+                  <li>• Multi-factor authentication support</li>
+                  <li>• Professional account management</li>
+                </ul>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </section>
 
