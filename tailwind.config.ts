@@ -61,6 +61,13 @@ export default {
           border: "var(--sidebar-border)",
           ring: "var(--sidebar-ring)",
         },
+        // Medical color palette
+        "medical-teal": "var(--medical-teal)",
+        "trustworthy-blue": "var(--trustworthy-blue)",
+        "clinical-white": "var(--clinical-white)",
+        "professional-grey": "var(--professional-grey)",
+        "health-green": "var(--health-green)",
+        "warm-orange": "var(--warm-orange)",
       },
       keyframes: {
         "accordion-down": {
