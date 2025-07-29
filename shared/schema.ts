@@ -25,17 +25,14 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User storage table
+// User storage table (mandatory for Replit Auth)
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: varchar("email").unique().notNull(),
-  password: varchar("password").notNull(),
+  email: varchar("email").unique(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   accountType: varchar("account_type").notNull().default("patient"), // therapist or patient
-  passwordResetToken: varchar("password_reset_token"),
-  passwordResetExpires: timestamp("password_reset_expires"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -131,20 +128,13 @@ export const reportsRelations = relations(reports, ({ one }) => ({
 
 // Insert schemas  
 export const insertUserSchema = createInsertSchema(users).omit({
-  id: true,
   createdAt: true,
   updatedAt: true,
-  passwordResetToken: true,
-  passwordResetExpires: true,
 });
 
-export const loginUserSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-});
-
-export const registerUserSchema = insertUserSchema.extend({
-  password: z.string().min(6, "Password must be at least 6 characters"),
+export const upsertUserSchema = createInsertSchema(users).omit({
+  createdAt: true,
+  updatedAt: true,
 });
 
 export const insertAudioFileSchema = createInsertSchema(audioFiles).omit({
@@ -164,10 +154,9 @@ export const insertReportSchema = createInsertSchema(reports).omit({
 });
 
 // Types
+export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
-export type LoginUser = z.infer<typeof loginUserSchema>;
-export type RegisterUser = z.infer<typeof registerUserSchema>;
 
 export type AudioFile = typeof audioFiles.$inferSelect;
 export type InsertAudioFile = z.infer<typeof insertAudioFileSchema>;

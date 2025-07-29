@@ -1,9 +1,9 @@
 import { useAuth } from "@/hooks/useAuth";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { isUnauthorizedError } from "@/lib/authUtils";
 import { useEffect } from "react";
 import { 
   Mic, 
@@ -49,35 +49,20 @@ export default function Home() {
     reportsGenerated: 15
   };
 
-  // Logout mutation
-  const logoutMutation = useMutation({
-    mutationFn: async () => {
-      await apiRequest("POST", "/api/logout");
-    },
-    onSuccess: () => {
-      queryClient.setQueryData(["/api/user"], null);
-      toast({
-        title: "Logged out",
-        description: "You have been logged out successfully.",
-      });
-      setLocation("/");
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Logout failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
   // Handle unauthorized access
   useEffect(() => {
     if (!authLoading && !user) {
-      setLocation("/auth");
+      toast({
+        title: "Unauthorized",
+        description: "You are logged out. Logging in again...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 500);
       return;
     }
-  }, [user, authLoading, setLocation]);
+  }, [user, authLoading, toast]);
 
   if (authLoading || !user) {
     return (
@@ -176,17 +161,14 @@ export default function Home() {
               </li>
             </ul>
 
-            {/* Logout Button */}
             <div className="absolute bottom-6 left-4 right-4">
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-gray-700 hover:bg-gray-100"
-                onClick={() => logoutMutation.mutate()}
-                disabled={logoutMutation.isPending}
+              <button 
+                onClick={() => window.location.href = '/api/logout'}
+                className="w-full flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               >
-                <Trash2 size={16} className="mr-3" />
-                {logoutMutation.isPending ? "Logging out..." : "Sign Out"}
-              </Button>
+                <span>🚪</span>
+                <span>Sign Out</span>
+              </button>
             </div>
           </nav>
         </div>
