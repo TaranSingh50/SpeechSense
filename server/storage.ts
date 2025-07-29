@@ -1,10 +1,14 @@
 import {
   users,
+  authTokens,
   audioFiles,
   speechAnalyses,
   reports,
   type User,
   type UpsertUser,
+  type InsertUser,
+  type AuthToken,
+  type InsertAuthToken,
   type AudioFile,
   type InsertAudioFile,
   type SpeechAnalysis,
@@ -13,12 +17,21 @@ import {
   type InsertReport,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, lt } from "drizzle-orm";
 
 export interface IStorage {
-  // User operations (mandatory for Replit Auth)
+  // User operations
   getUser(id: string): Promise<User | undefined>;
-  upsertUser(user: UpsertUser): Promise<User>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  updateUser(id: string, updates: Partial<User>): Promise<User>;
+  
+  // Authentication token operations
+  createAuthToken(token: InsertAuthToken): Promise<AuthToken>;
+  getAuthToken(token: string): Promise<AuthToken | undefined>;
+  getTokensByUserId(userId: string, type?: string): Promise<AuthToken[]>;
+  deleteAuthToken(token: string): Promise<void>;
+  deleteExpiredTokens(): Promise<void>;
   
   // Audio file operations
   createAudioFile(audioFile: InsertAudioFile): Promise<AudioFile>;
@@ -47,19 +60,58 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async upsertUser(userData: UpsertUser): Promise<User> {
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async createUser(userData: InsertUser): Promise<User> {
+    const [user] = await db.insert(users).values(userData).returning();
+    return user;
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User> {
     const [user] = await db
-      .insert(users)
-      .values(userData)
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
-      })
+      .update(users)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(users.id, id))
       .returning();
     return user;
+  }
+
+  // Authentication token operations
+  async createAuthToken(tokenData: InsertAuthToken): Promise<AuthToken> {
+    const [token] = await db.insert(authTokens).values(tokenData).returning();
+    return token;
+  }
+
+  async getAuthToken(token: string): Promise<AuthToken | undefined> {
+    const [authToken] = await db
+      .select()
+      .from(authTokens)
+      .where(and(eq(authTokens.token, token), lt(new Date(), authTokens.expiresAt)));
+    return authToken;
+  }
+
+  async getTokensByUserId(userId: string, type?: string): Promise<AuthToken[]> {
+    const conditions = [eq(authTokens.userId, userId)];
+    if (type) {
+      conditions.push(eq(authTokens.type, type));
+    }
+    
+    return await db
+      .select()
+      .from(authTokens)
+      .where(and(...conditions))
+      .orderBy(desc(authTokens.createdAt));
+  }
+
+  async deleteAuthToken(token: string): Promise<void> {
+    await db.delete(authTokens).where(eq(authTokens.token, token));
+  }
+
+  async deleteExpiredTokens(): Promise<void> {
+    await db.delete(authTokens).where(lt(authTokens.expiresAt, new Date()));
   }
 
   // Audio file operations

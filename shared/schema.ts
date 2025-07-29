@@ -25,17 +25,36 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User storage table (mandatory for Replit Auth)
+// User storage table with email/password authentication
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: varchar("email").unique(),
+  email: varchar("email").unique().notNull(),
+  password: varchar("password").notNull(), // hashed password
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   accountType: varchar("account_type").notNull().default("patient"), // therapist or patient
+  isEmailVerified: boolean("is_email_verified").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Authentication tokens table
+export const authTokens = pgTable("auth_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  token: varchar("token").notNull().unique(),
+  type: varchar("type").notNull(), // "access", "refresh", "email_verification", "password_reset"
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const authTokensRelations = relations(authTokens, ({ one }) => ({
+  user: one(users, {
+    fields: [authTokens.userId],
+    references: [users.id],
+  }),
+}));
 
 // Audio files table
 export const audioFiles = pgTable("audio_files", {
@@ -84,6 +103,7 @@ export const reports = pgTable("reports", {
 
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
+  authTokens: many(authTokens),
   audioFiles: many(audioFiles),
   speechAnalyses: many(speechAnalyses),
   reports: many(reports),
@@ -153,10 +173,36 @@ export const insertReportSchema = createInsertSchema(reports).omit({
   createdAt: true,
 });
 
+export const insertAuthTokenSchema = createInsertSchema(authTokens).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Authentication schemas for registration and login
+export const registerSchema = insertUserSchema.omit({
+  id: true,
+  isEmailVerified: true,
+}).extend({
+  confirmPassword: z.string().min(1, "Please confirm your password"),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
+export const loginSchema = z.object({
+  email: z.string().email("Please enter a valid email"),
+  password: z.string().min(1, "Password is required"),
+});
+
 // Types
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export type RegisterUser = z.infer<typeof registerSchema>;
+export type LoginUser = z.infer<typeof loginSchema>;
+
+export type AuthToken = typeof authTokens.$inferSelect;
+export type InsertAuthToken = z.infer<typeof insertAuthTokenSchema>;
 
 export type AudioFile = typeof audioFiles.$inferSelect;
 export type InsertAudioFile = z.infer<typeof insertAudioFileSchema>;

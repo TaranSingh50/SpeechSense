@@ -14,7 +14,7 @@ Preferred communication style: Simple, everyday language.
 - **Frontend**: React with TypeScript, using Vite as the build tool
 - **Backend**: Express.js server with TypeScript
 - **Database**: PostgreSQL with Drizzle ORM for type-safe database interactions
-- **Authentication**: Replit-based OAuth integration with session management
+- **Authentication**: JWT-based authentication with email/password registration and login
 - **UI Framework**: Shadcn/ui components with Radix UI primitives and Tailwind CSS
 
 ### Monorepo Structure
@@ -40,11 +40,12 @@ The application follows a monorepo pattern with clear separation of concerns:
 
 ### Database Schema
 Core entities include:
-- **Users**: Patient and therapist accounts with Replit OAuth integration
+- **Users**: Patient and therapist accounts with email/password authentication
+- **Auth Tokens**: JWT access and refresh token management for secure authentication
 - **Audio Files**: Metadata and file storage information
 - **Speech Analyses**: AI-generated analysis results with stuttering detection metrics
 - **Reports**: Professional clinical reports generated from analyses
-- **Sessions**: Secure session storage for authentication
+- **Sessions**: Legacy session storage table maintained for compatibility
 
 ## Data Flow
 
@@ -57,16 +58,17 @@ Core entities include:
 6. Professional reports can be generated from analysis data
 
 ### Authentication Flow
-1. Users authenticate via Replit OAuth
-2. Sessions are stored in PostgreSQL for security
-3. Authentication state is managed client-side with TanStack Query
-4. Protected routes require valid authentication
+1. Users register with email and password or login with existing credentials
+2. JWT access tokens are issued for API authorization (7 days expiry)
+3. HTTP-only refresh tokens enable secure token renewal (30 days expiry)
+4. Authentication state is managed client-side with TanStack Query
+5. Protected routes require valid JWT tokens in Authorization headers
 
 ## External Dependencies
 
 ### Core Dependencies
 - **Database**: Neon PostgreSQL serverless database
-- **Authentication**: Replit OAuth with OpenID Connect
+- **Authentication**: JWT tokens with bcrypt password hashing and HTTP-only cookies
 - **File Storage**: Local file system (expandable to cloud storage)
 - **AI Integration**: Mock implementation ready for real AI service integration
 

@@ -1,7 +1,9 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { authenticateToken } from "./middleware/auth";
+import authRoutes from "./routes/auth";
+import cookieParser from "cookie-parser";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -47,8 +49,8 @@ async function performSpeechAnalysis(audioFilePath: string, duration: number) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
-  await setupAuth(app);
+  // Middleware setup
+  app.use(cookieParser());
 
   // Ensure upload directory exists
   const uploadDir = path.join(process.cwd(), "uploads", "audio");
@@ -57,25 +59,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
-  });
+  app.use('/api/auth', authRoutes);
 
   // Audio File Routes
-  app.post('/api/audio/upload', isAuthenticated, upload.single('audio'), async (req: any, res) => {
+  app.post('/api/audio/upload', authenticateToken, upload.single('audio'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No audio file provided" });
       }
 
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const audioFile = await storage.createAudioFile({
         userId,
         fileName: req.file.filename,
@@ -93,9 +86,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/audio', isAuthenticated, async (req: any, res) => {
+  app.get('/api/audio', authenticateToken, async (req, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const audioFiles = await storage.getUserAudioFiles(userId);
       res.json(audioFiles);
     } catch (error) {
@@ -104,9 +97,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/audio/:id', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/audio/:id', authenticateToken, async (req, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const audioFile = await storage.getAudioFile(req.params.id);
       
       if (!audioFile || audioFile.userId !== userId) {
@@ -127,9 +120,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Speech Analysis Routes
-  app.post('/api/analysis', isAuthenticated, async (req: any, res) => {
+  app.post('/api/analysis', authenticateToken, async (req, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const { audioFileId } = req.body;
 
       if (!audioFileId) {
@@ -177,9 +170,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/analysis', isAuthenticated, async (req: any, res) => {
+  app.get('/api/analysis', authenticateToken, async (req, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const analyses = await storage.getUserAnalyses(userId);
       res.json(analyses);
     } catch (error) {
@@ -188,9 +181,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/analysis/:id', isAuthenticated, async (req: any, res) => {
+  app.get('/api/analysis/:id', authenticateToken, async (req, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const analysis = await storage.getSpeechAnalysis(req.params.id);
       
       if (!analysis || analysis.userId !== userId) {
@@ -205,9 +198,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Report Routes
-  app.post('/api/reports', isAuthenticated, async (req: any, res) => {
+  app.post('/api/reports', authenticateToken, async (req, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const reportData = insertReportSchema.parse(req.body);
 
       const report = await storage.createReport({
@@ -225,9 +218,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/reports', isAuthenticated, async (req: any, res) => {
+  app.get('/api/reports', authenticateToken, async (req, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const reports = await storage.getUserReports(userId);
       res.json(reports);
     } catch (error) {
@@ -236,9 +229,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/reports/:id', isAuthenticated, async (req: any, res) => {
+  app.get('/api/reports/:id', authenticateToken, async (req, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       const report = await storage.getReport(req.params.id);
       
       if (!report || report.userId !== userId) {
@@ -253,9 +246,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Dashboard stats
-  app.get('/api/dashboard/stats', isAuthenticated, async (req: any, res) => {
+  app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.id;
       
       const [audioFiles, analyses, reports] = await Promise.all([
         storage.getUserAudioFiles(userId),
