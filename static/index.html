@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpeechPath - AI-Powered Speech Analysis Platform</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: #3b82f6;
+        }
+        .auth-form {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #2563eb;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            cursor: pointer;
+        }
+        .tab.active {
+            background: #3b82f6;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .error {
+            color: #dc2626;
+            margin-top: 10px;
+        }
+        .success {
+            color: #059669;
+            margin-top: 10px;
+        }
+        .hidden {
+            display: none;
+        }
+        .dashboard {
+            display: none;
+        }
+        .dashboard.active {
+            display: block;
+        }
+        .upload-area {
+            border: 2px dashed #d1d5db;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            margin: 20px 0;
+            cursor: pointer;
+        }
+        .upload-area:hover {
+            border-color: #3b82f6;
+            background-color: #f8fafc;
+        }
+        .analysis-result {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Authentication Section -->
+        <div id="auth-section">
+            <div class="header">
+                <h1>🎤 SpeechPath</h1>
+                <p>AI-Powered Speech Analysis Platform</p>
+            </div>
+            
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('login')">Login</div>
+                <div class="tab" onclick="switchTab('register')">Register</div>
+            </div>
+            
+            <!-- Login Form -->
+            <div id="login-tab" class="tab-content active">
+                <form class="auth-form" id="login-form">
+                    <div class="form-group">
+                        <label for="login-email">Email:</label>
+                        <input type="email" id="login-email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password">Password:</label>
+                        <input type="password" id="login-password" required>
+                    </div>
+                    <button type="submit">Sign In</button>
+                </form>  
+            </div>
+            
+            <!-- Register Form -->
+            <div id="register-tab" class="tab-content">
+                <form class="auth-form" id="register-form">
+                    <div class="form-group">
+                        <label for="register-email">Email:</label>
+                        <input type="email" id="register-email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-first-name">First Name:</label>
+                        <input type="text" id="register-first-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-last-name">Last Name:</label>
+                        <input type="text" id="register-last-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-account-type">Account Type:</label>
+                        <select id="register-account-type" required>
+                            <option value="patient">Patient</option>
+                            <option value="therapist">Therapist</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-password">Password:</label>
+                        <input type="password" id="register-password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-confirm-password">Confirm Password:</label>
+                        <input type="password" id="register-confirm-password" required>
+                    </div>
+                    <button type="submit">Create Account</button>
+                </form>
+            </div>
+            
+            <div id="auth-message"></div>
+        </div>
+        
+        <!-- Dashboard Section -->
+        <div id="dashboard-section" class="dashboard">
+            <div class="header">
+                <h1>🎤 SpeechPath Dashboard</h1>
+                <p>Welcome, <span id="user-name"></span>!</p>
+                <button onclick="logout()" style="width: auto; float: right;">Logout</button>
+            </div>
+            
+            <div class="upload-area" onclick="document.getElementById('audio-file').click()">
+                <p>📁 Click to upload audio file</p>
+                <p>Supported formats: MP3, WAV, M4A</p>
+                <input type="file" id="audio-file" accept="audio/*" style="display: none;" onchange="uploadFile(this)">
+            </div>
+            
+            <div id="upload-status"></div>
+            <div id="analysis-results"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let authToken = localStorage.getItem('authToken');
+        let currentUser = null;
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            if (authToken) {
+                checkAuthStatus();
+            }
+        });
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            
+            document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
+            document.getElementById(`${tab}-tab`).classList.add('active');
+        }
+
+        async function checkAuthStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/user`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                if (response.ok) {
+                    currentUser = await response.json();
+                    showDashboard();
+                } else {
+                    localStorage.removeItem('authToken');
+                    authToken = null;
+                }
+            } catch (error) {
+                console.error('Auth check failed:', error);
+                localStorage.removeItem('authToken');
+                authToken = null;
+            }
+        }
+
+        function showDashboard() {
+            document.getElementById('auth-section').style.display = 'none';
+            document.getElementById('dashboard-section').classList.add('active');
+            document.getElementById('user-name').textContent = `${currentUser.firstName} ${currentUser.lastName}`;
+        }
+
+        function showAuth() {
+            document.getElementById('auth-section').style.display = 'block';
+            document.getElementById('dashboard-section').classList.remove('active');
+        }
+
+        // Login form handler
+        document.getElementById('login-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    authToken = data.access_token;
+                    localStorage.setItem('authToken', authToken);
+                    currentUser = data.user;
+                    showDashboard();
+                    showMessage('Login successful!', 'success');
+                } else {
+                    showMessage(data.detail || 'Login failed', 'error');
+                }
+            } catch (error) {
+                showMessage('Network error occurred', 'error');
+            }
+        });
+
+        // Register form handler
+        document.getElementById('register-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const formData = {
+                email: document.getElementById('register-email').value,
+                first_name: document.getElementById('register-first-name').value,
+                last_name: document.getElementById('register-last-name').value,
+                account_type: document.getElementById('register-account-type').value,
+                password: document.getElementById('register-password').value,
+                confirm_password: document.getElementById('register-confirm-password').value
+            };
+            
+            if (formData.password !== formData.confirm_password) {
+                showMessage('Passwords do not match', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    authToken = data.access_token;
+                    localStorage.setItem('authToken', authToken);
+                    currentUser = data.user;
+                    showDashboard();
+                    showMessage('Registration successful!', 'success');
+                } else {
+                    showMessage(data.detail || 'Registration failed', 'error');
+                }
+            } catch (error) {
+                showMessage('Network error occurred', 'error');
+            }
+        });
+
+        function logout() {
+            localStorage.removeItem('authToken');
+            authToken = null;
+            currentUser = null;
+            showAuth();
+            showMessage('Logged out successfully', 'success');
+        }
+
+        async function uploadFile(input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            document.getElementById('upload-status').innerHTML = '<p>Uploading file...</p>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/speech/upload`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('upload-status').innerHTML = '<p class="success">File uploaded successfully!</p>';
+                    analyzeAudio(data.id);
+                } else {
+                    document.getElementById('upload-status').innerHTML = `<p class="error">${data.detail || 'Upload failed'}</p>`;
+                }
+            } catch (error) {
+                document.getElementById('upload-status').innerHTML = '<p class="error">Network error occurred</p>';
+            }
+        }
+
+        async function analyzeAudio(audioFileId) {
+            document.getElementById('upload-status').innerHTML += '<p>Analyzing speech...</p>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/speech/analyze/${audioFileId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displayAnalysisResult(data);
+                } else {
+                    document.getElementById('upload-status').innerHTML += `<p class="error">${data.detail || 'Analysis failed'}</p>`;
+                }
+            } catch (error) {
+                document.getElementById('upload-status').innerHTML += '<p class="error">Analysis error occurred</p>';
+            }
+        }
+
+        function displayAnalysisResult(analysis) {
+            const resultsDiv = document.getElementById('analysis-results');
+            resultsDiv.innerHTML = `
+                <div class="analysis-result">
+                    <h3>Speech Analysis Results</h3>
+                    <p><strong>Stuttering Detected:</strong> ${analysis.stuttering_detected ? 'Yes' : 'No'}</p>
+                    <p><strong>Stuttering Percentage:</strong> ${analysis.stuttering_percentage}%</p>
+                    <p><strong>Total Words:</strong> ${analysis.total_words}</p>
+                    <p><strong>Stuttered Words:</strong> ${analysis.stuttered_words}</p>
+                    <p><strong>Speech Rate:</strong> ${analysis.speech_rate} words/minute</p>
+                    <p><strong>Average Pause Duration:</strong> ${analysis.average_pause_duration}s</p>
+                    <button onclick="generateReport(${analysis.id})">Generate Report</button>
+                </div>
+            `;
+        }
+
+        async function generateReport(analysisId) {
+            try {
+                const response = await fetch(`${API_BASE}/speech/reports/${analysisId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displayReport(data);
+                } else {
+                    showMessage(data.detail || 'Report generation failed', 'error');
+                }
+            } catch (error) {
+                showMessage('Network error occurred', 'error');
+            }
+        }
+
+        function displayReport(report) {
+            const resultsDiv = document.getElementById('analysis-results');
+            resultsDiv.innerHTML += `
+                <div class="analysis-result">
+                    <h3>${report.title}</h3>
+                    <h4>Summary</h4>
+                    <p>${report.summary}</p>
+                    <h4>Detailed Findings</h4>
+                    <p style="white-space: pre-line;">${report.detailed_findings}</p>
+                    <h4>Recommendations</h4>
+                    <p style="white-space: pre-line;">${report.recommendations}</p>
+                </div>
+            `;
+        }
+
+        function showMessage(message, type) {
+            const messageDiv = document.getElementById('auth-message');
+            messageDiv.innerHTML = `<p class="${type}">${message}</p>`;
+            setTimeout(() => {
+                messageDiv.innerHTML = '';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
