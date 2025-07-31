@@ -50,7 +50,30 @@ class BackupManager:
                 return False
                 
         except FileNotFoundError:
-            print("❌ pg_dump not found. Install PostgreSQL client tools.")
+            print("❌ pg_dump not found. Using alternative data export method...")
+            return self.create_data_export_backup()
+    
+    def create_data_export_backup(self):
+        """Create data export backup when pg_dump is unavailable"""
+        try:
+            import asyncio
+            import sys
+            sys.path.append('.')
+            
+            # Import and run the export script
+            result = subprocess.run([
+                "python", "scripts/export_data.py"
+            ], capture_output=True, text=True)
+            
+            if result.returncode == 0:
+                print("✅ Data export backup completed successfully")
+                return True
+            else:
+                print(f"❌ Data export failed: {result.stderr}")
+                return False
+                
+        except Exception as e:
+            print(f"❌ Backup error: {e}")
             return False
     
     def backup_files(self):
