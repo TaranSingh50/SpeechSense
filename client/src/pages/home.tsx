@@ -1,4 +1,4 @@
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ import {
 import { Link, useLocation } from "wouter";
 
 export default function Home() {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, logoutMutation } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
@@ -58,7 +58,7 @@ export default function Home() {
         variant: "destructive",
       });
       setTimeout(() => {
-        window.location.href = "/api/login";
+        setLocation("/auth");
       }, 500);
       return;
     }
@@ -77,8 +77,8 @@ export default function Home() {
     );
   }
 
-  const recentAudioFiles = audioFiles?.slice(0, 3) || [];
-  const recentAnalyses = analyses?.slice(0, 3) || [];
+  const recentAudioFiles = Array.isArray(audioFiles) ? audioFiles.slice(0, 3) : [];
+  const recentAnalyses = Array.isArray(analyses) ? analyses.slice(0, 3) : [];
 
   return (
     <div className="min-h-screen bg-clinical-white">
@@ -163,11 +163,12 @@ export default function Home() {
 
             <div className="absolute bottom-6 left-4 right-4">
               <button 
-                onClick={() => window.location.href = '/api/logout'}
-                className="w-full flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                onClick={() => logoutMutation.mutate()}
+                disabled={logoutMutation.isPending}
+                className="w-full flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
               >
                 <span>🚪</span>
-                <span>Sign Out</span>
+                <span>{logoutMutation.isPending ? "Signing out..." : "Sign Out"}</span>
               </button>
             </div>
           </nav>
@@ -188,7 +189,7 @@ export default function Home() {
                   <div>
                     <p className="text-sm font-medium text-gray-600">Total Sessions</p>
                     <p className="text-2xl font-bold text-professional-grey">
-                      {statsLoading ? "..." : stats?.totalSessions || 0}
+                      {statsLoading ? "..." : (stats as any)?.totalSessions || 0}
                     </p>
                   </div>
                   <div className="h-12 w-12 bg-medical-teal bg-opacity-10 rounded-lg flex items-center justify-center">
@@ -208,7 +209,7 @@ export default function Home() {
                   <div>
                     <p className="text-sm font-medium text-gray-600">Active Patients</p>
                     <p className="text-2xl font-bold text-professional-grey">
-                      {statsLoading ? "..." : stats?.activePatients || 1}
+                      {statsLoading ? "..." : (stats as any)?.activePatients || 1}
                     </p>
                   </div>
                   <div className="h-12 w-12 bg-trustworthy-blue bg-opacity-10 rounded-lg flex items-center justify-center">
@@ -228,7 +229,7 @@ export default function Home() {
                   <div>
                     <p className="text-sm font-medium text-gray-600">Analysis Complete</p>
                     <p className="text-2xl font-bold text-professional-grey">
-                      {statsLoading ? "..." : `${stats?.analysisComplete || 0}%`}
+                      {statsLoading ? "..." : `${(stats as any)?.analysisComplete || 0}%`}
                     </p>
                   </div>
                   <div className="h-12 w-12 bg-health-green bg-opacity-10 rounded-lg flex items-center justify-center">
@@ -248,7 +249,7 @@ export default function Home() {
                   <div>
                     <p className="text-sm font-medium text-gray-600">Reports Generated</p>
                     <p className="text-2xl font-bold text-professional-grey">
-                      {statsLoading ? "..." : stats?.reportsGenerated || 0}
+                      {statsLoading ? "..." : (stats as any)?.reportsGenerated || 0}
                     </p>
                   </div>
                   <div className="h-12 w-12 bg-warm-orange bg-opacity-10 rounded-lg flex items-center justify-center">

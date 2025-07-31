@@ -160,6 +160,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Logged out",
         description: "You have been successfully logged out.",
       });
+      // Navigate to login page
+      window.location.href = "/auth";
     },
     onError: (error: Error) => {
       // Still clear local data even if server logout fails
@@ -170,6 +172,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Logout completed",
         description: "You have been logged out.",
       });
+      // Navigate to login page even on error
+      window.location.href = "/auth";
     },
   });
 
@@ -235,7 +239,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider
       value={{
-        user: user || null,
+        user: user as User | null,
         isLoading,
         error,
         loginMutation,

@@ -179,11 +179,13 @@ export const insertAuthTokenSchema = createInsertSchema(authTokens).omit({
 });
 
 // Authentication schemas for registration and login
-export const registerSchema = insertUserSchema.omit({
-  id: true,
-  isEmailVerified: true,
-}).extend({
+export const registerSchema = z.object({
+  email: z.string().email("Please enter a valid email"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
   confirmPassword: z.string().min(1, "Please confirm your password"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  accountType: z.enum(["patient", "therapist"]).default("patient"),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
