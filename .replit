@@ -42,5 +42,18 @@ task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
 
+[[workflows.workflow]]
+name = "Daily Backup"
+author = 45781080
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python scripts/backup_manager.py full"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python scripts/backup_manager.py cleanup --keep-days 30"
+
 [agent]
 integrations = ["javascript_auth_all_persistance==1.0.0", "javascript_database==1.0.0"]
