@@ -8,8 +8,7 @@ packages = ["cargo", "libiconv", "libxcrypt", "postgresql", "rustc"]
 
 [deployment]
 deploymentTarget = "autoscale"
-build = ["npm", "run", "build"]
-run = ["npm", "run", "start"]
+run = ["sh", "-c", "npm run dev"]
 
 [[ports]]
 localPort = 3001
