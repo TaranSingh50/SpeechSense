@@ -1,5 +1,5 @@
 import { useAuth } from "@/hooks/use-auth";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useState, useRef } from "react";
@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { AudioRecorder } from "@/components/audio-recorder";
 import { FileUpload } from "@/components/file-upload";
+import { useAudioLibrary } from "@/hooks/useAudioLibrary";
 import { 
   Mic, 
   Upload, 
@@ -27,23 +28,17 @@ export default function AudioManagement() {
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Fetch audio files with more aggressive refresh settings
-  const { data: audioFiles = [], isLoading, refetch } = useQuery({
-    queryKey: ["/api/audio"],
-    enabled: !!user,
-    staleTime: 0, // Always consider data stale
-    cacheTime: 0, // Don't cache results
-  });
+  // Use custom audio library hook with enhanced refresh
+  const { audioFiles, isLoading, forceRefresh } = useAudioLibrary();
 
   // Delete audio file mutation
   const deleteAudioMutation = useMutation({
     mutationFn: async (fileId: string) => {
       await apiRequest("DELETE", `/api/audio/${fileId}`);
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       // Force immediate refresh of the audio library
-      queryClient.invalidateQueries({ queryKey: ["/api/audio"] });
-      refetch(); // Force immediate refetch
+      await forceRefresh();
       toast({
         title: "File deleted",
         description: "Audio file has been successfully deleted.",
@@ -76,10 +71,7 @@ export default function AudioManagement() {
     },
   });
 
-  // Auto refresh function (called after any library changes)
-  const autoRefreshLibrary = () => {
-    queryClient.invalidateQueries({ queryKey: ["/api/audio"] });
-  };
+
 
   // Audio playback functions
   const playAudio = async (fileId: string, fileName: string) => {
