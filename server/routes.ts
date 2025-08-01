@@ -97,6 +97,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Stream audio file for playback
+  app.get('/api/audio/:id/stream', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const audioFile = await storage.getAudioFile(req.params.id);
+      
+      if (!audioFile || audioFile.userId !== userId) {
+        return res.status(404).json({ message: "Audio file not found" });
+      }
+
+      // Check if file exists
+      if (!fs.existsSync(audioFile.filePath)) {
+        return res.status(404).json({ message: "Audio file not found on disk" });
+      }
+
+      // Set appropriate headers for audio streaming
+      res.setHeader('Content-Type', audioFile.mimeType);
+      res.setHeader('Accept-Ranges', 'bytes');
+      
+      // Stream the file
+      const fileStream = fs.createReadStream(audioFile.filePath);
+      fileStream.pipe(res);
+      
+    } catch (error) {
+      console.error("Error streaming audio file:", error);
+      res.status(500).json({ message: "Failed to stream audio file" });
+    }
+  });
+
   app.delete('/api/audio/:id', authenticateToken, async (req, res) => {
     try {
       const userId = req.user!.id;

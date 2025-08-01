@@ -2,7 +2,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -12,10 +12,12 @@ import {
   Mic, 
   Upload, 
   Play, 
+  Pause,
   TrendingUp, 
   Trash2, 
   FileAudio,
-  ArrowLeft 
+  ArrowLeft,
+  RefreshCw
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -23,6 +25,8 @@ export default function AudioManagement() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Fetch audio files
   const { data: audioFiles = [], isLoading } = useQuery({
@@ -41,6 +45,13 @@ export default function AudioManagement() {
         title: "File deleted",
         description: "Audio file has been successfully deleted.",
       });
+      // Stop playing if this file was playing
+      if (playingAudioId) {
+        setPlayingAudioId(null);
+        if (audioRef.current) {
+          audioRef.current.pause();
+        }
+      }
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
@@ -61,6 +72,69 @@ export default function AudioManagement() {
       });
     },
   });
+
+  // Manual refresh function
+  const refreshLibrary = () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/audio"] });
+    toast({
+      title: "Library refreshed",
+      description: "Audio file library has been updated.",
+    });
+  };
+
+  // Audio playback functions
+  const playAudio = async (fileId: string, fileName: string) => {
+    try {
+      // If same audio is playing, pause it
+      if (playingAudioId === fileId) {
+        if (audioRef.current) {
+          audioRef.current.pause();
+          setPlayingAudioId(null);
+        }
+        return;
+      }
+
+      // Stop current audio if playing
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+
+      // Create audio element and play
+      const audio = new Audio(`/api/audio/${fileId}/stream`);
+      audioRef.current = audio;
+      
+      audio.onended = () => {
+        setPlayingAudioId(null);
+      };
+      
+      audio.onerror = () => {
+        toast({
+          title: "Playback error",
+          description: "Unable to play this audio file.",
+          variant: "destructive",
+        });
+        setPlayingAudioId(null);
+      };
+
+      setPlayingAudioId(fileId);
+      await audio.play();
+      
+    } catch (error) {
+      toast({
+        title: "Playback error", 
+        description: "Unable to play this audio file.",
+        variant: "destructive",
+      });
+      setPlayingAudioId(null);
+    }
+  };
+
+  const stopAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+    setPlayingAudioId(null);
+  };
 
   return (
     <div className="min-h-screen bg-clinical-white">
@@ -122,7 +196,19 @@ export default function AudioManagement() {
           {/* Audio File Library */}
           <Card>
             <CardContent className="p-6">
-              <h3 className="text-lg font-heading font-semibold text-professional-grey mb-4">Audio File Library</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-heading font-semibold text-professional-grey">Audio File Library</h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={refreshLibrary}
+                  disabled={isLoading}
+                  className="flex items-center space-x-2"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                  <span>Refresh</span>
+                </Button>
+              </div>
               
               {isLoading ? (
                 <div className="space-y-4">
@@ -156,9 +242,10 @@ export default function AudioManagement() {
                           size="sm"
                           variant="ghost"
                           className="text-gray-600 hover:text-medical-teal"
-                          title="Play Audio"
+                          title={playingAudioId === file.id ? "Pause Audio" : "Play Audio"}
+                          onClick={() => playingAudioId === file.id ? stopAudio() : playAudio(file.id, file.originalName)}
                         >
-                          <Play size={16} />
+                          {playingAudioId === file.id ? <Pause size={16} /> : <Play size={16} />}
                         </Button>
                         <Link href="/analysis">
                           <Button

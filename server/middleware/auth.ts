@@ -1,12 +1,12 @@
 import { Request, Response, NextFunction } from "express";
 import { authService } from "../auth";
-import { User } from "@shared/schema";
+import { users } from "@shared/schema";
 
 // Extend Express Request type to include user
 declare global {
   namespace Express {
     interface Request {
-      user?: User;
+      user?: typeof users.$inferSelect;
     }
   }
 }
@@ -46,7 +46,7 @@ export function requireAccountType(accountType: string | string[]) {
     }
 
     const allowedTypes = Array.isArray(accountType) ? accountType : [accountType];
-    if (!allowedTypes.includes(req.user.accountType)) {
+    if (!allowedTypes.includes(req.user.accountType!)) {
       return res.status(403).json({ message: "Insufficient permissions" });
     }
 

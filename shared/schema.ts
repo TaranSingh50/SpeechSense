@@ -178,6 +178,8 @@ export const insertAuthTokenSchema = createInsertSchema(authTokens).omit({
   createdAt: true,
 });
 
+
+
 // Authentication schemas for registration and login
 export const registerSchema = z.object({
   email: z.string().email("Please enter a valid email"),
