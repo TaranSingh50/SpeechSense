@@ -5,7 +5,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { CloudUpload, File, CheckCircle, AlertCircle } from "lucide-react";
-import { useAudioLibrary } from "@/hooks/useAudioLibrary";
 
 export function FileUpload() {
   const [dragActive, setDragActive] = useState(false);
@@ -13,7 +12,6 @@ export function FileUpload() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { forceRefresh } = useAudioLibrary();
 
   // Upload file mutation
   const uploadMutation = useMutation({
@@ -41,9 +39,9 @@ export function FileUpload() {
         throw error;
       }
     },
-    onSuccess: async () => {
-      // Force immediate refresh of the audio library
-      await forceRefresh();
+    onSuccess: () => {
+      // Auto refresh library after upload
+      queryClient.invalidateQueries({ queryKey: ["/api/audio"] });
       toast({
         title: "Upload successful",
         description: "Your audio file has been uploaded and is ready for analysis.",

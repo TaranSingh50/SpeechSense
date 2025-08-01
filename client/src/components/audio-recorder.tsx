@@ -6,7 +6,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { Mic, Square, Play, Pause } from "lucide-react";
-import { useAudioLibrary } from "@/hooks/useAudioLibrary";
 
 export function AudioRecorder() {
   const [isRecording, setIsRecording] = useState(false);
@@ -20,16 +19,15 @@ export function AudioRecorder() {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { forceRefresh } = useAudioLibrary();
 
   // Upload recorded audio mutation
   const uploadMutation = useMutation({
     mutationFn: async (formData: FormData) => {
       return await apiRequest("POST", "/api/audio/upload", formData);
     },
-    onSuccess: async () => {
-      // Force immediate refresh of the audio library
-      await forceRefresh();
+    onSuccess: () => {
+      // Auto refresh library after recording save
+      queryClient.invalidateQueries({ queryKey: ["/api/audio"] });
       toast({
         title: "Recording saved",
         description: "Your audio recording has been successfully saved.",

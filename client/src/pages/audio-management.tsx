@@ -1,5 +1,5 @@
 import { useAuth } from "@/hooks/use-auth";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useState, useRef } from "react";
@@ -8,7 +8,6 @@ import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { AudioRecorder } from "@/components/audio-recorder";
 import { FileUpload } from "@/components/file-upload";
-import { useAudioLibrary } from "@/hooks/useAudioLibrary";
 import { 
   Mic, 
   Upload, 
@@ -28,17 +27,20 @@ export default function AudioManagement() {
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Use custom audio library hook with enhanced refresh
-  const { audioFiles, isLoading, forceRefresh } = useAudioLibrary();
+  // Fetch audio files
+  const { data: audioFiles = [], isLoading } = useQuery({
+    queryKey: ["/api/audio"],
+    enabled: !!user,
+  });
 
   // Delete audio file mutation
   const deleteAudioMutation = useMutation({
     mutationFn: async (fileId: string) => {
       await apiRequest("DELETE", `/api/audio/${fileId}`);
     },
-    onSuccess: async () => {
-      // Force immediate refresh of the audio library
-      await forceRefresh();
+    onSuccess: () => {
+      // Auto refresh library after deletion
+      queryClient.invalidateQueries({ queryKey: ["/api/audio"] });
       toast({
         title: "File deleted",
         description: "Audio file has been successfully deleted.",
@@ -71,7 +73,10 @@ export default function AudioManagement() {
     },
   });
 
-
+  // Auto refresh function (called after any library changes)
+  const autoRefreshLibrary = () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/audio"] });
+  };
 
   // Audio playback functions
   const playAudio = async (fileId: string, fileName: string) => {
