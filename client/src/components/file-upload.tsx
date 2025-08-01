@@ -40,6 +40,7 @@ export function FileUpload() {
       }
     },
     onSuccess: () => {
+      // Auto refresh library after upload
       queryClient.invalidateQueries({ queryKey: ["/api/audio"] });
       toast({
         title: "Upload successful",

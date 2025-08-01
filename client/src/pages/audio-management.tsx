@@ -16,8 +16,7 @@ import {
   TrendingUp, 
   Trash2, 
   FileAudio,
-  ArrowLeft,
-  RefreshCw
+  ArrowLeft
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -40,6 +39,7 @@ export default function AudioManagement() {
       await apiRequest("DELETE", `/api/audio/${fileId}`);
     },
     onSuccess: () => {
+      // Auto refresh library after deletion
       queryClient.invalidateQueries({ queryKey: ["/api/audio"] });
       toast({
         title: "File deleted",
@@ -73,13 +73,9 @@ export default function AudioManagement() {
     },
   });
 
-  // Manual refresh function
-  const refreshLibrary = () => {
+  // Auto refresh function (called after any library changes)
+  const autoRefreshLibrary = () => {
     queryClient.invalidateQueries({ queryKey: ["/api/audio"] });
-    toast({
-      title: "Library refreshed",
-      description: "Audio file library has been updated.",
-    });
   };
 
   // Audio playback functions
@@ -99,12 +95,40 @@ export default function AudioManagement() {
         audioRef.current.pause();
       }
 
+      // Get access token for audio streaming
+      const accessToken = localStorage.getItem("accessToken");
+      if (!accessToken) {
+        toast({
+          title: "Authentication required",
+          description: "Please log in to play audio files.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Fetch audio stream with proper authentication
+      const response = await fetch(`/api/audio/${fileId}/stream`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to load audio');
+      }
+
+      // Create blob URL from response
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      
       // Create audio element and play
-      const audio = new Audio(`/api/audio/${fileId}/stream`);
+      const audio = new Audio(audioUrl);
       audioRef.current = audio;
       
       audio.onended = () => {
         setPlayingAudioId(null);
+        URL.revokeObjectURL(audioUrl); // Clean up blob URL
       };
       
       audio.onerror = () => {
@@ -114,6 +138,7 @@ export default function AudioManagement() {
           variant: "destructive",
         });
         setPlayingAudioId(null);
+        URL.revokeObjectURL(audioUrl); // Clean up blob URL
       };
 
       setPlayingAudioId(fileId);
@@ -196,19 +221,7 @@ export default function AudioManagement() {
           {/* Audio File Library */}
           <Card>
             <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-heading font-semibold text-professional-grey">Audio File Library</h3>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={refreshLibrary}
-                  disabled={isLoading}
-                  className="flex items-center space-x-2"
-                >
-                  <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                  <span>Refresh</span>
-                </Button>
-              </div>
+              <h3 className="text-lg font-heading font-semibold text-professional-grey mb-4">Audio File Library</h3>
               
               {isLoading ? (
                 <div className="space-y-4">
