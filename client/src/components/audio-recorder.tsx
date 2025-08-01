@@ -26,8 +26,9 @@ export function AudioRecorder() {
       return await apiRequest("POST", "/api/audio/upload", formData);
     },
     onSuccess: () => {
-      // Auto refresh library after recording save
+      // Force immediate refresh of the audio library
       queryClient.invalidateQueries({ queryKey: ["/api/audio"] });
+      queryClient.refetchQueries({ queryKey: ["/api/audio"] });
       toast({
         title: "Recording saved",
         description: "Your audio recording has been successfully saved.",

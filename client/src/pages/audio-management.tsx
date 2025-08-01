@@ -27,10 +27,12 @@ export default function AudioManagement() {
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Fetch audio files
-  const { data: audioFiles = [], isLoading } = useQuery({
+  // Fetch audio files with more aggressive refresh settings
+  const { data: audioFiles = [], isLoading, refetch } = useQuery({
     queryKey: ["/api/audio"],
     enabled: !!user,
+    staleTime: 0, // Always consider data stale
+    cacheTime: 0, // Don't cache results
   });
 
   // Delete audio file mutation
@@ -39,8 +41,9 @@ export default function AudioManagement() {
       await apiRequest("DELETE", `/api/audio/${fileId}`);
     },
     onSuccess: () => {
-      // Auto refresh library after deletion
+      // Force immediate refresh of the audio library
       queryClient.invalidateQueries({ queryKey: ["/api/audio"] });
+      refetch(); // Force immediate refetch
       toast({
         title: "File deleted",
         description: "Audio file has been successfully deleted.",

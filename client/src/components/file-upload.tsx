@@ -40,8 +40,9 @@ export function FileUpload() {
       }
     },
     onSuccess: () => {
-      // Auto refresh library after upload
+      // Force immediate refresh of the audio library
       queryClient.invalidateQueries({ queryKey: ["/api/audio"] });
+      queryClient.refetchQueries({ queryKey: ["/api/audio"] });
       toast({
         title: "Upload successful",
         description: "Your audio file has been uploaded and is ready for analysis.",
