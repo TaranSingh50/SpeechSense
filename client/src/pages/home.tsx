@@ -29,10 +29,11 @@ export default function Home() {
     enabled: !!user,
   });
 
-  // Fetch recent audio files
+  // Fetch recent audio files with polling for immediate updates
   const { data: audioFiles = [], isLoading: audioLoading } = useQuery({
     queryKey: ["/api/audio"],
     enabled: !!user,
+    refetchInterval: 5000, // Poll every 5 seconds
   });
 
   // Fetch recent analyses

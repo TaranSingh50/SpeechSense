@@ -19,6 +19,8 @@ SpeechPath is a professional healthcare application designed for speech-language
 - Enhanced user experience with clear cancel options in both recording and file upload workflows ✅
 - Fixed automatic refresh for Audio File Library after recording save and file upload ✅
 - Improved query client configuration to ensure immediate updates without manual page refresh ✅
+- Added intelligent polling system for audio files and analyses to catch server-side processing updates ✅
+- Implemented 3-second polling for audio files and status-based polling for speech analyses ✅
 
 ## User Preferences
 

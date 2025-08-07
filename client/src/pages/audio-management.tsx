@@ -27,10 +27,24 @@ export default function AudioManagement() {
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Fetch audio files
+  // Fetch audio files with polling for immediate updates
   const { data: audioFiles = [], isLoading } = useQuery({
     queryKey: ["/api/audio"],
     enabled: !!user,
+    refetchInterval: 3000, // Poll every 3 seconds for immediate updates
+  });
+
+  // Fetch analyses to check for processing status
+  const { data: analyses = [] } = useQuery({
+    queryKey: ["/api/analysis"],
+    enabled: !!user,
+    refetchInterval: (data) => {
+      // Poll every 3 seconds if any analyses are still processing
+      const hasProcessingAnalyses = Array.isArray(data) && data.some((analysis: any) => 
+        analysis.status === 'processing' || analysis.status === 'pending'
+      );
+      return hasProcessingAnalyses ? 3000 : false;
+    },
   });
 
   // Delete audio file mutation
