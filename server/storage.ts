@@ -198,4 +198,183 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-export const storage = new DatabaseStorage();
+// Temporary in-memory storage implementation to handle database connectivity issues
+export class MemStorage implements IStorage {
+  private users: Map<string, User> = new Map();
+  private usersByEmail: Map<string, User> = new Map();
+  private authTokens: Map<string, AuthToken> = new Map();
+  private audioFiles: Map<string, AudioFile> = new Map();
+  private speechAnalyses: Map<string, SpeechAnalysis> = new Map();
+  private reports: Map<string, Report> = new Map();
+
+  // User operations
+  async getUser(id: string): Promise<User | undefined> {
+    return this.users.get(id);
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return this.usersByEmail.get(email);
+  }
+
+  async createUser(userData: InsertUser): Promise<User> {
+    const id = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const user: User = {
+      id,
+      ...userData,
+      isEmailVerified: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.users.set(id, user);
+    this.usersByEmail.set(userData.email, user);
+    return user;
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User> {
+    const user = this.users.get(id);
+    if (!user) throw new Error("User not found");
+    
+    const updatedUser = { ...user, ...updates, updatedAt: new Date() };
+    this.users.set(id, updatedUser);
+    this.usersByEmail.set(updatedUser.email, updatedUser);
+    return updatedUser;
+  }
+
+  // Authentication token operations
+  async createAuthToken(tokenData: InsertAuthToken): Promise<AuthToken> {
+    const id = `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const authToken: AuthToken = {
+      id,
+      ...tokenData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.authTokens.set(tokenData.token, authToken);
+    return authToken;
+  }
+
+  async getAuthToken(token: string): Promise<AuthToken | undefined> {
+    const authToken = this.authTokens.get(token);
+    if (authToken && authToken.expiresAt > new Date()) {
+      return authToken;
+    }
+    return undefined;
+  }
+
+  async getTokensByUserId(userId: string, type?: string): Promise<AuthToken[]> {
+    return Array.from(this.authTokens.values()).filter(
+      token => token.userId === userId && (!type || token.type === type)
+    );
+  }
+
+  async deleteAuthToken(token: string): Promise<void> {
+    this.authTokens.delete(token);
+  }
+
+  async deleteExpiredTokens(): Promise<void> {
+    const now = new Date();
+    for (const [token, authToken] of this.authTokens.entries()) {
+      if (authToken.expiresAt <= now) {
+        this.authTokens.delete(token);
+      }
+    }
+  }
+
+  // Audio file operations
+  async createAudioFile(audioFileData: InsertAudioFile): Promise<AudioFile> {
+    const id = `audio_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const audioFile: AudioFile = {
+      id,
+      ...audioFileData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.audioFiles.set(id, audioFile);
+    return audioFile;
+  }
+
+  async getAudioFile(id: string): Promise<AudioFile | undefined> {
+    return this.audioFiles.get(id);
+  }
+
+  async getUserAudioFiles(userId: string): Promise<AudioFile[]> {
+    return Array.from(this.audioFiles.values())
+      .filter(file => file.userId === userId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  async deleteAudioFile(id: string): Promise<void> {
+    this.audioFiles.delete(id);
+  }
+
+  // Speech analysis operations
+  async createSpeechAnalysis(analysisData: InsertSpeechAnalysis): Promise<SpeechAnalysis> {
+    const id = `analysis_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const analysis: SpeechAnalysis = {
+      id,
+      ...analysisData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.speechAnalyses.set(id, analysis);
+    return analysis;
+  }
+
+  async getSpeechAnalysis(id: string): Promise<SpeechAnalysis | undefined> {
+    return this.speechAnalyses.get(id);
+  }
+
+  async updateSpeechAnalysis(id: string, updates: Partial<SpeechAnalysis>): Promise<SpeechAnalysis> {
+    const analysis = this.speechAnalyses.get(id);
+    if (!analysis) throw new Error("Speech analysis not found");
+    
+    const updatedAnalysis = { ...analysis, ...updates, updatedAt: new Date() };
+    this.speechAnalyses.set(id, updatedAnalysis);
+    return updatedAnalysis;
+  }
+
+  async getUserAnalyses(userId: string): Promise<SpeechAnalysis[]> {
+    return Array.from(this.speechAnalyses.values())
+      .filter(analysis => analysis.userId === userId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  // Report operations
+  async createReport(reportData: InsertReport): Promise<Report> {
+    const id = `report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const report: Report = {
+      id,
+      ...reportData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.reports.set(id, report);
+    return report;
+  }
+
+  async getReport(id: string): Promise<Report | undefined> {
+    return this.reports.get(id);
+  }
+
+  async getUserReports(userId: string): Promise<Report[]> {
+    return Array.from(this.reports.values())
+      .filter(report => report.userId === userId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  async updateReport(id: string, updates: Partial<Report>): Promise<Report> {
+    const report = this.reports.get(id);
+    if (!report) throw new Error("Report not found");
+    
+    const updatedReport = { ...report, ...updates, updatedAt: new Date() };
+    this.reports.set(id, updatedReport);
+    return updatedReport;
+  }
+
+  async deleteReport(id: string): Promise<void> {
+    this.reports.delete(id);
+  }
+}
+
+// Use MemStorage temporarily while database endpoint is disabled
+export const storage = new MemStorage();
