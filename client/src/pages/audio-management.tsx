@@ -43,6 +43,11 @@ export default function AudioManagement() {
       const hasProcessingAnalyses = Array.isArray(data) && data.some((analysis: any) => 
         analysis.status === 'processing' || analysis.status === 'pending'
       );
+      console.log('Audio Management polling check:', { 
+        dataLength: Array.isArray(data) ? data.length : 'not array',
+        hasProcessing: hasProcessingAnalyses,
+        statuses: Array.isArray(data) ? data.map((a: any) => a.status) : 'no data'
+      });
       return hasProcessingAnalyses ? 3000 : false;
     },
   });

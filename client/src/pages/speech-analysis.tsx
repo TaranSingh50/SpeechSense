@@ -42,6 +42,11 @@ export default function SpeechAnalysis() {
       const hasProcessingAnalyses = Array.isArray(data) && data.some((analysis: any) => 
         analysis.status === 'processing' || analysis.status === 'pending'
       );
+      console.log('Polling check:', { 
+        dataLength: Array.isArray(data) ? data.length : 'not array',
+        hasProcessing: hasProcessingAnalyses,
+        statuses: Array.isArray(data) ? data.map((a: any) => a.status) : 'no data'
+      });
       return hasProcessingAnalyses ? 2000 : false;
     },
   });
