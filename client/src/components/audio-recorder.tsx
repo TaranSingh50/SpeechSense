@@ -28,6 +28,8 @@ export function AudioRecorder() {
     onSuccess: () => {
       // Auto refresh library after recording save
       queryClient.invalidateQueries({ queryKey: ["/api/audio"] });
+      // Force refetch to ensure immediate update
+      queryClient.refetchQueries({ queryKey: ["/api/audio"] });
       toast({
         title: "Recording saved",
         description: "Your audio recording has been successfully saved.",

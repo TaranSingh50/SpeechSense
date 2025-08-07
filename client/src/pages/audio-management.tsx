@@ -41,6 +41,8 @@ export default function AudioManagement() {
     onSuccess: () => {
       // Auto refresh library after deletion
       queryClient.invalidateQueries({ queryKey: ["/api/audio"] });
+      // Force refetch to ensure immediate update
+      queryClient.refetchQueries({ queryKey: ["/api/audio"] });
       toast({
         title: "File deleted",
         description: "Audio file has been successfully deleted.",
