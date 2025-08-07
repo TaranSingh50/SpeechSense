@@ -131,6 +131,11 @@ export function FileUpload() {
     }
   };
 
+  const cancelUpload = () => {
+    setSelectedFile(null);
+    setUploadProgress(0);
+  };
+
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -190,13 +195,23 @@ export function FileUpload() {
                 <p className="text-sm text-gray-500">{formatFileSize(selectedFile.size)}</p>
               </div>
             </div>
-            <Button
-              onClick={uploadFile}
-              disabled={uploadMutation.isPending}
-              className="bg-trustworthy-blue hover:bg-trustworthy-blue/90"
-            >
-              {uploadMutation.isPending ? 'Uploading...' : 'Upload'}
-            </Button>
+            <div className="flex space-x-2">
+              <Button
+                onClick={uploadFile}
+                disabled={uploadMutation.isPending}
+                className="bg-trustworthy-blue hover:bg-trustworthy-blue/90"
+              >
+                {uploadMutation.isPending ? 'Uploading...' : 'Upload'}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={cancelUpload}
+                disabled={uploadMutation.isPending}
+                className="text-red-600 border-red-600 hover:bg-red-50"
+              >
+                Cancel
+              </Button>
+            </div>
           </div>
           
           {/* Upload Progress */}

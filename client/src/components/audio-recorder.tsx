@@ -133,6 +133,18 @@ export function AudioRecorder() {
     }
   }, [audioBlob, uploadMutation]);
 
+  const cancelRecording = useCallback(() => {
+    // Clean up audio URL to free memory
+    if (audioUrl) {
+      URL.revokeObjectURL(audioUrl);
+    }
+    // Reset all recording state
+    setAudioBlob(null);
+    setAudioUrl(null);
+    setRecordingTime(0);
+    setIsPlaying(false);
+  }, [audioUrl]);
+
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -204,6 +216,16 @@ export function AudioRecorder() {
               className="bg-health-green hover:bg-health-green/90 text-white"
             >
               {uploadMutation.isPending ? 'Saving...' : 'Save Recording'}
+            </Button>
+            
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={cancelRecording}
+              disabled={uploadMutation.isPending}
+              className="text-red-600 border-red-600 hover:bg-red-50"
+            >
+              Cancel
             </Button>
           </div>
         </div>
