@@ -25,11 +25,17 @@ export function AudioRecorder() {
     mutationFn: async (formData: FormData) => {
       return await apiRequest("POST", "/api/audio/upload", formData);
     },
-    onSuccess: () => {
-      // Auto refresh library after recording save
-      queryClient.invalidateQueries({ queryKey: ["/api/audio"] });
-      // Force refetch to ensure immediate update
-      queryClient.refetchQueries({ queryKey: ["/api/audio"] });
+    onSuccess: async () => {
+      try {
+        // Force complete cache reset for immediate update
+        await queryClient.resetQueries({ queryKey: ["/api/audio"] });
+        console.log("Audio recorder: Cache reset completed successfully");
+      } catch (error) {
+        console.error("Audio recorder: Cache reset failed:", error);
+        // Fallback to invalidate and refetch
+        queryClient.invalidateQueries({ queryKey: ["/api/audio"] });
+        await queryClient.refetchQueries({ queryKey: ["/api/audio"] });
+      }
       toast({
         title: "Recording saved",
         description: "Your audio recording has been successfully saved.",

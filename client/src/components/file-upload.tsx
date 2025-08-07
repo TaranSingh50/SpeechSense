@@ -39,11 +39,17 @@ export function FileUpload() {
         throw error;
       }
     },
-    onSuccess: () => {
-      // Auto refresh library after upload
-      queryClient.invalidateQueries({ queryKey: ["/api/audio"] });
-      // Force refetch to ensure immediate update
-      queryClient.refetchQueries({ queryKey: ["/api/audio"] });
+    onSuccess: async () => {
+      try {
+        // Force complete cache reset for immediate update
+        await queryClient.resetQueries({ queryKey: ["/api/audio"] });
+        console.log("File upload: Cache reset completed successfully");
+      } catch (error) {
+        console.error("File upload: Cache reset failed:", error);
+        // Fallback to invalidate and refetch
+        queryClient.invalidateQueries({ queryKey: ["/api/audio"] });
+        await queryClient.refetchQueries({ queryKey: ["/api/audio"] });
+      }
       toast({
         title: "Upload successful",
         description: "Your audio file has been uploaded and is ready for analysis.",

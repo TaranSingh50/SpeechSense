@@ -38,11 +38,9 @@ export default function AudioManagement() {
     mutationFn: async (fileId: string) => {
       await apiRequest("DELETE", `/api/audio/${fileId}`);
     },
-    onSuccess: () => {
-      // Auto refresh library after deletion
-      queryClient.invalidateQueries({ queryKey: ["/api/audio"] });
-      // Force refetch to ensure immediate update
-      queryClient.refetchQueries({ queryKey: ["/api/audio"] });
+    onSuccess: async () => {
+      // Force complete cache reset for immediate update
+      await queryClient.resetQueries({ queryKey: ["/api/audio"] });
       toast({
         title: "File deleted",
         description: "Audio file has been successfully deleted.",
