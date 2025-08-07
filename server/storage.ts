@@ -86,10 +86,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAuthToken(token: string): Promise<AuthToken | undefined> {
+    const now = new Date();
     const [authToken] = await db
       .select()
       .from(authTokens)
-      .where(and(eq(authTokens.token, token), lt(new Date(), authTokens.expiresAt)));
+      .where(and(eq(authTokens.token, token), lt(now, authTokens.expiresAt)));
     return authToken;
   }
 
@@ -376,5 +377,5 @@ export class MemStorage implements IStorage {
   }
 }
 
-// Use MemStorage temporarily while database endpoint is disabled
-export const storage = new MemStorage();
+// Use database storage for persistence
+export const storage = new DatabaseStorage();

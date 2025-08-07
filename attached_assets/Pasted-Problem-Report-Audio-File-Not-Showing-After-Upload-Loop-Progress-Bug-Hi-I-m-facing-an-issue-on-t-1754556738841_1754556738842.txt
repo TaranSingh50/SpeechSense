@@ -1,0 +1,60 @@
+Problem Report: Audio File Not Showing After Upload + Loop Progress Bug
+Hi, I’m facing an issue on the Audio Management (Audio File Library) page that persists even after uploading or recording new audio files.
+Current Behavior (Bug):
+When I upload or record a new audio file:
+
+
+- It does not appear in the Audio File Library list immediately.
+
+
+- The view instead shows a looping “progress” indicator or placeholder.
+
+
+- The list keeps polling every few seconds, but the uploaded file never shows up.
+
+
+- Only a manual page refresh reveals the new file.
+
+
+What I see in the console logs:
+Audio Management polling - query data: []
+Audio Management polling check: {dataType: 'object', isArray: true, dataLength: 0, hasProcessing: false, statuses: Array(0)}
+(repeats over and over)
+
+What this means:
+- The polling is working — it checks every few seconds.
+- But the query data returned is an empty array, so nothing is rendered.
+- Even though the file was uploaded or recorded, it’s not returned in the API response (query.data = []), so the UI keeps showing an empty list.
+
+
+Summary of Likely Issue:
+- The frontend polling logic is correct now (you’re using TanStack Query v5's queryFn, accessing query.state.data properly).
+- But the backend or caching layer isn't returning the newly uploaded file.
+  - Either the new file isn’t saved properly,
+  - or the query returns stale/filtered/empty data.
+
+
+Suggestions:
+Please check the following:
+Does the server actually store the uploaded file?
+- Can you log or inspect the backend response after upload?
+- Confirm that the uploaded file is added to the correct list in the database.
+
+
+Does the query for Audio Management page return the correct data immediately after upload?
+- Please confirm that the query returns the new file.
+- If it doesn't, maybe there’s a filter condition or a stale cache issue?
+
+
+Can you temporarily log the raw API response from the backend for the audio file list endpoint — immediately after upload?
+
+
+Request:
+Could you please:
+- Ensure that the uploaded file is returned by the Audio Management query (not just stored)?
+- Add any logging or error handling to trace the file lifecycle from upload → query visibility?
+
+
+Let me know if you'd like me to reproduce the issue again or record a short clip.
+ Thanks a lot for your help!
+
