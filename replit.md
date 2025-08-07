@@ -29,6 +29,7 @@ SpeechPath is a professional healthcare application designed for speech-language
 - Implemented 3-second polling for audio files and status-based polling for speech analyses ✅
 - Successfully migrated from in-memory to PostgreSQL database persistence ✅  
 - Fixed audio file library query authentication and polling system ✅
+- Resolved critical frontend TanStack Query missing queryFn bug ✅
 
 ## User Preferences
 

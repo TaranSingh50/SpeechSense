@@ -30,6 +30,20 @@ export default function AudioManagement() {
   // Fetch audio files - simple polling for new uploads
   const { data: audioFiles = [], isLoading, error: audioError } = useQuery({
     queryKey: ["/api/audio"],
+    queryFn: async () => {
+      const accessToken = localStorage.getItem("accessToken");
+      const response = await fetch("/api/audio", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      return response.json();
+    },
     enabled: !!user,
     refetchInterval: 3000, // Poll every 3 seconds for new uploads
     retry: (failureCount, error: any) => {
@@ -43,6 +57,20 @@ export default function AudioManagement() {
   // Fetch analyses to check for processing status
   const { data: analyses = [], error: analysesError } = useQuery({
     queryKey: ["/api/analysis"],
+    queryFn: async () => {
+      const accessToken = localStorage.getItem("accessToken");
+      const response = await fetch("/api/analysis", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      return response.json();
+    },
     enabled: !!user,
     refetchInterval: (query) => {
       // In TanStack Query v5, the callback receives the query object, not just data
