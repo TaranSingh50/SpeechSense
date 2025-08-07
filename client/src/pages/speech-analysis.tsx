@@ -34,19 +34,28 @@ export default function SpeechAnalysis() {
   });
 
   // Fetch analyses with polling for processing status
-  const { data: analyses = [], isLoading: analysesLoading } = useQuery({
+  const { data: analyses = [], isLoading: analysesLoading, error: analysesError } = useQuery({
     queryKey: ["/api/analysis"],
     enabled: !!user,
-    refetchInterval: (data) => {
-      // Poll every 2 seconds if any analyses are still processing
-      const hasProcessingAnalyses = Array.isArray(data) && data.some((analysis: any) => 
+    refetchInterval: (query) => {
+      // In TanStack Query v5, the callback receives the query object, not just data
+      const queryData = query.state.data;
+      console.log('Speech Analysis polling - query data:', queryData);
+      
+      // Ensure data is an array
+      const analysesArray = Array.isArray(queryData) ? queryData : [];
+      const hasProcessingAnalyses = analysesArray.some((analysis: any) => 
         analysis.status === 'processing' || analysis.status === 'pending'
       );
-      console.log('Polling check:', { 
-        dataLength: Array.isArray(data) ? data.length : 'not array',
+      
+      console.log('Speech Analysis polling check:', { 
+        dataType: typeof queryData,
+        isArray: Array.isArray(queryData),
+        dataLength: analysesArray.length,
         hasProcessing: hasProcessingAnalyses,
-        statuses: Array.isArray(data) ? data.map((a: any) => a.status) : 'no data'
+        statuses: analysesArray.map((a: any) => a.status)
       });
+      
       return hasProcessingAnalyses ? 2000 : false;
     },
   });

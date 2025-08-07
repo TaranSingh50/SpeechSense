@@ -35,19 +35,28 @@ export default function AudioManagement() {
   });
 
   // Fetch analyses to check for processing status
-  const { data: analyses = [] } = useQuery({
+  const { data: analyses = [], error: analysesError } = useQuery({
     queryKey: ["/api/analysis"],
     enabled: !!user,
-    refetchInterval: (data) => {
-      // Poll every 3 seconds if any analyses are still processing
-      const hasProcessingAnalyses = Array.isArray(data) && data.some((analysis: any) => 
+    refetchInterval: (query) => {
+      // In TanStack Query v5, the callback receives the query object, not just data
+      const queryData = query.state.data;
+      console.log('Audio Management polling - query data:', queryData);
+      
+      // Ensure data is an array
+      const analysesArray = Array.isArray(queryData) ? queryData : [];
+      const hasProcessingAnalyses = analysesArray.some((analysis: any) => 
         analysis.status === 'processing' || analysis.status === 'pending'
       );
+      
       console.log('Audio Management polling check:', { 
-        dataLength: Array.isArray(data) ? data.length : 'not array',
+        dataType: typeof queryData,
+        isArray: Array.isArray(queryData),
+        dataLength: analysesArray.length,
         hasProcessing: hasProcessingAnalyses,
-        statuses: Array.isArray(data) ? data.map((a: any) => a.status) : 'no data'
+        statuses: analysesArray.map((a: any) => a.status)
       });
+      
       return hasProcessingAnalyses ? 3000 : false;
     },
   });
