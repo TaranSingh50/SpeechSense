@@ -28,8 +28,10 @@ const upload = multer({
 
 // Basic speech analysis simulation (replace with actual AI service)
 async function performSpeechAnalysis(audioFilePath: string, duration: number) {
+  console.log(`Starting speech analysis for file: ${audioFilePath}`);
   // Simulate processing time
   await new Promise(resolve => setTimeout(resolve, 2000));
+  console.log(`Speech analysis completed for file: ${audioFilePath}`);
   
   // Mock analysis results - replace with actual AI analysis
   const mockResults = {
@@ -173,6 +175,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Start analysis in background
       performSpeechAnalysis(audioFile.filePath, audioFile.duration || 0)
         .then(async (results) => {
+          console.log(`Analysis completed for ${analysis.id}, updating status to completed...`);
           await storage.updateSpeechAnalysis(analysis.id, {
             status: "completed",
             fluencyScore: results.fluencyScore,
@@ -184,12 +187,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             analysisResults: results,
             completedAt: new Date(),
           });
+          console.log(`Analysis ${analysis.id} status updated to completed successfully`);
         })
         .catch(async (error) => {
           console.error("Analysis failed:", error);
           await storage.updateSpeechAnalysis(analysis.id, {
             status: "failed",
           });
+          console.log(`Analysis ${analysis.id} status updated to failed`);
         });
 
       res.json(analysis);

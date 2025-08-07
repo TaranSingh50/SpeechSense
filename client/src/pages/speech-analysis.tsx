@@ -33,10 +33,17 @@ export default function SpeechAnalysis() {
     enabled: !!user,
   });
 
-  // Fetch analyses
+  // Fetch analyses with polling for processing status
   const { data: analyses = [], isLoading: analysesLoading } = useQuery({
     queryKey: ["/api/analysis"],
     enabled: !!user,
+    refetchInterval: (data) => {
+      // Poll every 2 seconds if any analyses are still processing
+      const hasProcessingAnalyses = Array.isArray(data) && data.some((analysis: any) => 
+        analysis.status === 'processing' || analysis.status === 'pending'
+      );
+      return hasProcessingAnalyses ? 2000 : false;
+    },
   });
 
   // Start analysis mutation

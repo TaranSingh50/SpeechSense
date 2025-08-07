@@ -27,11 +27,11 @@ export default function AudioManagement() {
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Fetch audio files with polling for immediate updates
+  // Fetch audio files - simple polling for new uploads
   const { data: audioFiles = [], isLoading } = useQuery({
     queryKey: ["/api/audio"],
     enabled: !!user,
-    refetchInterval: 3000, // Poll every 3 seconds for immediate updates
+    refetchInterval: 5000, // Poll every 5 seconds for new uploads
   });
 
   // Fetch analyses to check for processing status
