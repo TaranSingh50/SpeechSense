@@ -28,10 +28,16 @@ export default function AudioManagement() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Fetch audio files - simple polling for new uploads
-  const { data: audioFiles = [], isLoading } = useQuery({
+  const { data: audioFiles = [], isLoading, error: audioError } = useQuery({
     queryKey: ["/api/audio"],
     enabled: !!user,
-    refetchInterval: 5000, // Poll every 5 seconds for new uploads
+    refetchInterval: 3000, // Poll every 3 seconds for new uploads
+    retry: (failureCount, error: any) => {
+      console.log('Audio query retry attempt:', failureCount, error?.message);
+      // Don't retry if it's an auth error
+      if (error?.message?.includes('401')) return false;
+      return failureCount < 3;
+    },
   });
 
   // Fetch analyses to check for processing status
@@ -42,6 +48,9 @@ export default function AudioManagement() {
       // In TanStack Query v5, the callback receives the query object, not just data
       const queryData = query.state.data;
       console.log('Audio Management polling - query data:', queryData);
+      console.log('Audio Management polling - audioFiles data:', audioFiles);
+      console.log('Audio Management polling - audioFiles length:', Array.isArray(audioFiles) ? audioFiles.length : 0);
+      console.log('Audio Management user state:', !!user);
       
       // Ensure data is an array
       const analysesArray = Array.isArray(queryData) ? queryData : [];
