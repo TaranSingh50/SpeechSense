@@ -1,6 +1,6 @@
 // Shared audio utility functions for consistent behavior across components
 
-// Utility function to get audio duration
+// Utility function to get audio duration from URL
 export const getAudioDuration = (url: string): Promise<number> =>
   new Promise((resolve, reject) => {
     const audio = new Audio();
@@ -12,6 +12,26 @@ export const getAudioDuration = (url: string): Promise<number> =>
       reject(new Error('Failed to load audio'));
     });
   });
+
+// Utility function to get audio duration from File object
+export const getAudioDurationFromFile = (file: File): Promise<number> => {
+  return new Promise((resolve, reject) => {
+    const audio = document.createElement("audio");
+    audio.preload = "metadata";
+
+    audio.onloadedmetadata = () => {
+      window.URL.revokeObjectURL(audio.src);
+      resolve(audio.duration);
+    };
+
+    audio.onerror = () => {
+      window.URL.revokeObjectURL(audio.src);
+      reject(new Error("Could not load audio metadata"));
+    };
+
+    audio.src = URL.createObjectURL(file);
+  });
+};
 
 // Utility function to format duration with error handling
 export const formatDuration = (seconds: number): string => {

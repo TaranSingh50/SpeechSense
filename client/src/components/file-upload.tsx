@@ -1,15 +1,18 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { CloudUpload, File, CheckCircle, AlertCircle } from "lucide-react";
+import { getAudioDurationFromFile, formatDuration } from "@/utils/audioUtils";
 
 export function FileUpload() {
   const [dragActive, setDragActive] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileDuration, setFileDuration] = useState<number | null>(null);
+  const [durationLoading, setDurationLoading] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -57,9 +60,13 @@ export function FileUpload() {
       // Reset state
       setSelectedFile(null);
       setUploadProgress(0);
+      setFileDuration(null);
+      setDurationLoading(false);
     },
     onError: (error) => {
       setUploadProgress(0);
+      setFileDuration(null);
+      setDurationLoading(false);
       if (isUnauthorizedError(error)) {
         toast({
           title: "Unauthorized",
@@ -131,6 +138,28 @@ export function FileUpload() {
     setSelectedFile(file);
   };
 
+  // Effect to get duration when file is selected
+  useEffect(() => {
+    if (selectedFile) {
+      setDurationLoading(true);
+      setFileDuration(null);
+      
+      getAudioDurationFromFile(selectedFile)
+        .then((duration) => {
+          setFileDuration(duration);
+          setDurationLoading(false);
+        })
+        .catch((error) => {
+          console.log(`Failed to get duration for ${selectedFile.name}:`, error);
+          setFileDuration(null);
+          setDurationLoading(false);
+        });
+    } else {
+      setFileDuration(null);
+      setDurationLoading(false);
+    }
+  }, [selectedFile]);
+
   const uploadFile = () => {
     if (selectedFile) {
       const formData = new FormData();
@@ -142,6 +171,8 @@ export function FileUpload() {
   const cancelUpload = () => {
     setSelectedFile(null);
     setUploadProgress(0);
+    setFileDuration(null);
+    setDurationLoading(false);
   };
 
   const formatFileSize = (bytes: number) => {
@@ -200,7 +231,18 @@ export function FileUpload() {
               </div>
               <div>
                 <p className="font-medium text-professional-grey">{selectedFile.name}</p>
-                <p className="text-sm text-gray-500">{formatFileSize(selectedFile.size)}</p>
+                <div className="flex items-center space-x-2 text-sm text-gray-500">
+                  <span>{formatFileSize(selectedFile.size)}</span>
+                  <span>•</span>
+                  <span>
+                    {durationLoading 
+                      ? "Detecting duration..." 
+                      : fileDuration !== null 
+                        ? formatDuration(fileDuration) 
+                        : "NA"
+                    }
+                  </span>
+                </div>
               </div>
             </div>
             <div className="flex space-x-2">

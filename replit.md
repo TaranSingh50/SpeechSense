@@ -39,6 +39,9 @@ SpeechPath is a professional healthcare application designed for speech-language
 - Fixed duration display bug with "Duration not available" fallback for invalid values ✅
 - Created shared audioUtils.ts for consistent audio handling across components ✅
 - Applied duration and label improvements to Dashboard Recent Audio Files section ✅
+- Added audio duration detection for file uploads with HTML5 Audio API ✅
+- Implemented real-time duration display in Upload Audio File section showing format like "1:32" ✅
+- Enhanced file upload UI with duration loading states and "NA" fallback for unreadable files ✅
 
 ## User Preferences
 
