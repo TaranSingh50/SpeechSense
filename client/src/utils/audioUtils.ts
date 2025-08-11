@@ -16,7 +16,7 @@ export const getAudioDuration = (url: string): Promise<number> =>
 // Utility function to format duration with error handling
 export const formatDuration = (seconds: number): string => {
   if (!isFinite(seconds) || isNaN(seconds) || seconds <= 0) {
-    return "Duration not available";
+    return "NA";
   }
   if (seconds < 60) {
     return `${Math.round(seconds)}s`;
