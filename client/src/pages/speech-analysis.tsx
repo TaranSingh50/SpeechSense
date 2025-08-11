@@ -62,6 +62,7 @@ export default function SpeechAnalysis() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedAudioFile, setSelectedAudioFile] = useState<string>('');
+  const [currentAnalysis, setCurrentAnalysis] = useState<Analysis | null>(null);
   const [showPDFPreview, setShowPDFPreview] = useState(false);
   const [pdfZoom, setPdfZoom] = useState(100);
   const [emailAddress, setEmailAddress] = useState('');
@@ -88,12 +89,14 @@ export default function SpeechAnalysis() {
   });
 
   // Start analysis mutation
-  const startAnalysisMutation = useMutation({
-    mutationFn: async (audioFileId: string) => {
-      return await apiRequest("POST", "/api/analysis", { audioFileId });
+  const startAnalysisMutation = useMutation<Analysis, Error, string>({
+    mutationFn: async (audioFileId: string): Promise<Analysis> => {
+      const response = await apiRequest("POST", "/api/analysis", { audioFileId });
+      return await response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: Analysis) => {
       queryClient.invalidateQueries({ queryKey: ["/api/analysis"] });
+      setCurrentAnalysis(data); // Set the analysis we just started
       toast({
         title: "Analysis started",
         description: "Speech analysis is now processing. This may take a few minutes.",
@@ -171,6 +174,9 @@ export default function SpeechAnalysis() {
       });
       return;
     }
+    // Reset previous analysis and PDF preview
+    setCurrentAnalysis(null);
+    setShowPDFPreview(false);
     startAnalysisMutation.mutate(selectedAudioFile);
   };
 
@@ -201,12 +207,20 @@ export default function SpeechAnalysis() {
     sendEmailMutation.mutate({ analysisId, email: emailAddress });
   };
 
-  // Find processing analysis or most recent completed one
-  const processingAnalysis = analyses.find(a => a.status === 'processing' || a.status === 'pending');
-  const completedAnalysis = analyses.find(a => a.status === 'completed');
+  // Check for current analysis status updates
+  if (currentAnalysis && analyses.length > 0) {
+    const updatedAnalysis = analyses.find(a => a.id === currentAnalysis.id);
+    if (updatedAnalysis && updatedAnalysis.status !== currentAnalysis.status) {
+      setCurrentAnalysis(updatedAnalysis);
+    }
+  }
 
-  // Get selected audio file details
+  // Get selected audio file details (but only show details after analysis starts)
   const selectedAudio = audioFiles.find(file => file.id === selectedAudioFile);
+  
+  // Only show analysis if user has started one
+  const isProcessing = currentAnalysis && (currentAnalysis.status === 'processing' || currentAnalysis.status === 'pending');
+  const isCompleted = currentAnalysis && currentAnalysis.status === 'completed';
 
   return (
     <div className="min-h-screen bg-clinical-white">
@@ -297,7 +311,7 @@ export default function SpeechAnalysis() {
           </Card>
 
           {/* Progress Animation - Only show during processing */}
-          {processingAnalysis && (
+          {isProcessing && (
             <Card className="mb-8">
               <CardHeader>
                 <CardTitle className="flex items-center">
@@ -312,11 +326,11 @@ export default function SpeechAnalysis() {
                       <div className="flex justify-between mb-2">
                         <span className="text-sm font-medium text-gray-700">Processing Audio</span>
                         <span className="text-sm text-gray-500">
-                          {processingAnalysis.status === 'processing' ? '75%' : '25%'}
+                          {currentAnalysis?.status === 'processing' ? '75%' : '25%'}
                         </span>
                       </div>
                       <Progress 
-                        value={processingAnalysis.status === 'processing' ? 75 : 25} 
+                        value={currentAnalysis?.status === 'processing' ? 75 : 25} 
                         className="h-3"
                       />
                     </div>
@@ -325,7 +339,7 @@ export default function SpeechAnalysis() {
                   <div className="flex items-center space-x-2">
                     <Loader2 className="h-4 w-4 animate-spin text-medical-teal" />
                     <span className="text-sm text-gray-600">
-                      {processingAnalysis.status === 'processing' 
+                      {currentAnalysis?.status === 'processing' 
                         ? "Analyzing speech patterns and generating transcription..."
                         : "Initializing analysis pipeline..."
                       }
@@ -344,7 +358,7 @@ export default function SpeechAnalysis() {
           )}
 
           {/* Analysis Details Section - Only show when analysis is completed */}
-          {completedAnalysis && (
+          {isCompleted && currentAnalysis && (
             <div className="space-y-8">
               <Card>
                 <CardHeader>
@@ -396,8 +410,8 @@ export default function SpeechAnalysis() {
                           <TrendingUp className="h-8 w-8 mx-auto mb-2 text-gray-500" />
                           <p className="text-sm text-gray-600">Speech Rate</p>
                           <p className="font-semibold" data-testid="text-speech-rate">
-                            {completedAnalysis.speechRate && isFinite(completedAnalysis.speechRate)
-                              ? `${Math.round(completedAnalysis.speechRate)} WPM`
+                            {currentAnalysis.speechRate && isFinite(currentAnalysis.speechRate)
+                              ? `${Math.round(currentAnalysis.speechRate)} WPM`
                               : 'N/A (Could not be calculated)'
                             }
                           </p>
@@ -411,9 +425,9 @@ export default function SpeechAnalysis() {
                     <h3 className="text-lg font-semibold mb-4">Audio Transcription</h3>
                     <Card className="p-6">
                       <div className="max-h-48 overflow-y-auto bg-gray-50 rounded-lg p-4" data-testid="transcription-view">
-                        {completedAnalysis.analysisResults?.transcription ? (
+                        {currentAnalysis.analysisResults?.transcription ? (
                           <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
-                            {completedAnalysis.analysisResults.transcription}
+                            {currentAnalysis.analysisResults.transcription}
                           </p>
                         ) : (
                           <div className="text-center py-8">
@@ -430,17 +444,17 @@ export default function SpeechAnalysis() {
                       <div className="mt-4 flex items-center space-x-2">
                         <Badge variant="outline">
                           <MessageSquare className="mr-1 h-3 w-3" />
-                          Confidence: {completedAnalysis.confidenceLevel && isFinite(completedAnalysis.confidenceLevel) 
-                            ? `${Math.round(completedAnalysis.confidenceLevel * 100)}%` 
+                          Confidence: {currentAnalysis.confidenceLevel && isFinite(currentAnalysis.confidenceLevel) 
+                            ? `${Math.round(currentAnalysis.confidenceLevel * 100)}%` 
                             : 'N/A'
                           }
                         </Badge>
                         <Badge variant="outline">
-                          Events Detected: {completedAnalysis.stutteringEvents || 0}
+                          Events Detected: {currentAnalysis.stutteringEvents || 0}
                         </Badge>
                         <Badge variant="outline">
-                          Fluency Score: {completedAnalysis.fluencyScore && isFinite(completedAnalysis.fluencyScore)
-                            ? `${completedAnalysis.fluencyScore.toFixed(1)}/10`
+                          Fluency Score: {currentAnalysis.fluencyScore && isFinite(currentAnalysis.fluencyScore)
+                            ? `${currentAnalysis.fluencyScore.toFixed(1)}/10`
                             : 'N/A'
                           }
                         </Badge>
@@ -453,7 +467,7 @@ export default function SpeechAnalysis() {
                     <h3 className="text-lg font-semibold mb-4">PDF Actions</h3>
                     <div className="flex flex-wrap gap-4 mb-6">
                       <Button
-                        onClick={() => generatePDFMutation.mutate(completedAnalysis.id)}
+                        onClick={() => generatePDFMutation.mutate(currentAnalysis.id)}
                         disabled={generatePDFMutation.isPending}
                         className="bg-trustworthy-blue hover:bg-trustworthy-blue/90"
                         data-testid="button-generate-pdf"
@@ -472,7 +486,7 @@ export default function SpeechAnalysis() {
                       </Button>
                       
                       <Button
-                        onClick={() => handleDownloadPDF(completedAnalysis.id)}
+                        onClick={() => handleDownloadPDF(currentAnalysis.id)}
                         variant="outline"
                         disabled={!showPDFPreview}
                         data-testid="button-download-pdf"
@@ -531,7 +545,7 @@ export default function SpeechAnalysis() {
                             <div className="text-center mb-8">
                               <h2 className="text-2xl font-bold text-gray-800">Speech Analysis Report</h2>
                               <p className="text-gray-600 mt-2">Generated on {new Date().toLocaleDateString()}</p>
-                              <p className="text-gray-600">Analysis ID: {completedAnalysis.id}</p>
+                              <p className="text-gray-600">Analysis ID: {currentAnalysis.id}</p>
                             </div>
                             
                             <div className="space-y-6">
@@ -550,8 +564,8 @@ export default function SpeechAnalysis() {
                                   <div className="bg-gray-50 p-3 rounded">
                                     <p className="text-sm text-gray-600">Fluency Score</p>
                                     <p className="font-semibold">
-                                      {completedAnalysis.fluencyScore && isFinite(completedAnalysis.fluencyScore) 
-                                        ? `${completedAnalysis.fluencyScore.toFixed(1)}/10` 
+                                      {currentAnalysis.fluencyScore && isFinite(currentAnalysis.fluencyScore) 
+                                        ? `${currentAnalysis.fluencyScore.toFixed(1)}/10` 
                                         : 'N/A'
                                       }
                                     </p>
@@ -559,21 +573,21 @@ export default function SpeechAnalysis() {
                                   <div className="bg-gray-50 p-3 rounded">
                                     <p className="text-sm text-gray-600">Speech Rate</p>
                                     <p className="font-semibold">
-                                      {completedAnalysis.speechRate && isFinite(completedAnalysis.speechRate) 
-                                        ? `${Math.round(completedAnalysis.speechRate)} WPM` 
+                                      {currentAnalysis.speechRate && isFinite(currentAnalysis.speechRate) 
+                                        ? `${Math.round(currentAnalysis.speechRate)} WPM` 
                                         : 'N/A'
                                       }
                                     </p>
                                   </div>
                                   <div className="bg-gray-50 p-3 rounded">
                                     <p className="text-sm text-gray-600">Stuttering Events</p>
-                                    <p className="font-semibold">{completedAnalysis.stutteringEvents || 0}</p>
+                                    <p className="font-semibold">{currentAnalysis.stutteringEvents || 0}</p>
                                   </div>
                                   <div className="bg-gray-50 p-3 rounded">
                                     <p className="text-sm text-gray-600">Confidence</p>
                                     <p className="font-semibold">
-                                      {completedAnalysis.confidenceLevel && isFinite(completedAnalysis.confidenceLevel)
-                                        ? `${Math.round(completedAnalysis.confidenceLevel * 100)}%`
+                                      {currentAnalysis.confidenceLevel && isFinite(currentAnalysis.confidenceLevel)
+                                        ? `${Math.round(currentAnalysis.confidenceLevel * 100)}%`
                                         : 'N/A'
                                       }
                                     </p>
@@ -581,12 +595,12 @@ export default function SpeechAnalysis() {
                                 </div>
                               </div>
 
-                              {completedAnalysis.analysisResults?.transcription && (
+                              {currentAnalysis.analysisResults?.transcription && (
                                 <div>
                                   <h3 className="text-lg font-semibold mb-2">Transcription</h3>
                                   <div className="bg-gray-50 p-4 rounded">
                                     <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                                      {completedAnalysis.analysisResults.transcription}
+                                      {currentAnalysis.analysisResults.transcription}
                                     </p>
                                   </div>
                                 </div>
@@ -603,7 +617,7 @@ export default function SpeechAnalysis() {
           )}
 
           {/* Email Dialog */}
-          {showEmailDialog && completedAnalysis && (
+          {showEmailDialog && currentAnalysis && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <Card className="w-96 max-w-sm">
                 <CardHeader>
@@ -627,7 +641,7 @@ export default function SpeechAnalysis() {
                     
                     <div className="flex space-x-3">
                       <Button
-                        onClick={() => handleSendEmail(completedAnalysis.id)}
+                        onClick={() => handleSendEmail(currentAnalysis.id)}
                         disabled={sendEmailMutation.isPending}
                         className="bg-medical-teal hover:bg-medical-teal/90 flex-1"
                         data-testid="button-send-email"
@@ -656,7 +670,7 @@ export default function SpeechAnalysis() {
           )}
 
           {/* No Analysis State */}
-          {!processingAnalysis && !completedAnalysis && analyses.length === 0 && (
+          {!isProcessing && !isCompleted && !currentAnalysis && (
             <Card>
               <CardContent className="p-12 text-center">
                 <TrendingUp className="w-16 h-16 text-gray-400 mx-auto mb-4" />
