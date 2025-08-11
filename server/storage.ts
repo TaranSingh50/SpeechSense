@@ -112,7 +112,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteExpiredTokens(): Promise<void> {
-    await db.delete(authTokens).where(lt(authTokens.expiresAt, new Date()));
+    const now = new Date();
+    await db.delete(authTokens).where(lt(authTokens.expiresAt, now.toISOString()));
   }
 
   // Audio file operations
@@ -168,7 +169,7 @@ export class DatabaseStorage implements IStorage {
 
   // Report operations
   async createReport(report: InsertReport): Promise<Report> {
-    const [result] = await db.insert(reports).values(report).returning();
+    const [result] = await db.insert(reports).values([report]).returning();
     return result;
   }
 
@@ -221,7 +222,12 @@ export class MemStorage implements IStorage {
     const id = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const user: User = {
       id,
-      ...userData,
+      email: userData.email,
+      password: userData.password,
+      firstName: userData.firstName || null,
+      lastName: userData.lastName || null,
+      profileImageUrl: userData.profileImageUrl || null,
+      accountType: userData.accountType || 'patient',
       isEmailVerified: false,
       createdAt: new Date(),
       updatedAt: new Date(),

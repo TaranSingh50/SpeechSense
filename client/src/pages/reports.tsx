@@ -56,11 +56,7 @@ export default function Reports() {
     refetchInterval: 5000, // Poll every 5 seconds to see new reports
   });
   
-  // Debug logging
-  console.log("Reports query - user:", !!user);
-  console.log("Reports query - loading:", reportsLoading);
-  console.log("Reports query - data:", reports);
-  console.log("Reports query - error:", reportsError);
+
 
   // Generate report mutation
   const generateReportMutation = useMutation({
