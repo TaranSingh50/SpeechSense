@@ -254,6 +254,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       performSpeechAnalysis(audioFile.filePath, audioFile.duration || 0)
         .then(async (results) => {
           console.log(`Analysis completed for ${analysis.id}, updating status to completed...`);
+          console.log(`Transcription length: ${results.transcription?.length || 'N/A'} characters`);
+          console.log(`Full results structure:`, Object.keys(results));
           await storage.updateSpeechAnalysis(analysis.id, {
             status: "completed",
             fluencyScore: results.fluencyScore,
