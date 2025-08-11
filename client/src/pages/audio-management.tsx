@@ -2,7 +2,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -20,12 +20,39 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 
+// Utility function to get audio duration
+const getAudioDuration = (url: string): Promise<number> =>
+  new Promise((resolve, reject) => {
+    const audio = new Audio();
+    audio.src = url;
+    audio.addEventListener('loadedmetadata', () => {
+      resolve(audio.duration);
+    });
+    audio.addEventListener('error', () => {
+      reject(new Error('Failed to load audio'));
+    });
+  });
+
+// Utility function to format duration
+const formatDuration = (seconds: number): string => {
+  if (seconds < 60) {
+    return `${Math.round(seconds)}s`;
+  }
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.round(seconds % 60);
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+};
+
+// Utility function to detect if file is recorded or uploaded
+const isRecorded = (filename: string): boolean => filename.startsWith("recording_");
+
 export default function AudioManagement() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [audioDurations, setAudioDurations] = useState<Record<string, number>>({});
 
   // Fetch audio files - simple polling for new uploads
   const { data: audioFiles = [], isLoading, error: audioError } = useQuery({
@@ -53,6 +80,43 @@ export default function AudioManagement() {
       return failureCount < 3;
     },
   });
+
+  // Load audio durations for all files
+  const loadAudioDurations = async (files: any[]) => {
+    const newDurations: Record<string, number> = {};
+    
+    for (const file of files) {
+      if (!audioDurations[file.id]) {
+        try {
+          const accessToken = localStorage.getItem("accessToken");
+          const response = await fetch(`/api/audio/${file.id}/stream`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          
+          if (response.ok) {
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const duration = await getAudioDuration(url);
+            newDurations[file.id] = duration;
+            URL.revokeObjectURL(url);
+          }
+        } catch (error) {
+          console.log(`Failed to load duration for ${file.originalName}:`, error);
+        }
+      }
+    }
+    
+    if (Object.keys(newDurations).length > 0) {
+      setAudioDurations(prev => ({ ...prev, ...newDurations }));
+    }
+  };
+
+  // Load durations when audio files change
+  useEffect(() => {
+    if (audioFiles && audioFiles.length > 0) {
+      loadAudioDurations(audioFiles);
+    }
+  }, [audioFiles, audioDurations]);
 
   // Fetch analyses to check for processing status
   const { data: analyses = [], error: analysesError } = useQuery({
@@ -310,9 +374,21 @@ export default function AudioManagement() {
                         </div>
                         <div>
                           <p className="font-medium text-professional-grey">{file.originalName}</p>
-                          <p className="text-sm text-gray-500">
-                            {(file.fileSize / 1024 / 1024).toFixed(1)} MB • {file.duration ? `${Math.floor(file.duration / 60)}:${(file.duration % 60).toString().padStart(2, '0')}` : 'Duration unknown'} • Uploaded {new Date(file.createdAt).toLocaleDateString()}
-                          </p>
+                          <div className="flex items-center space-x-2 text-sm text-gray-500">
+                            <span>{(file.fileSize / 1024 / 1024).toFixed(1)} MB</span>
+                            <span>•</span>
+                            <span>{audioDurations[file.id] ? formatDuration(audioDurations[file.id]) : 'Loading...'}</span>
+                            <span>•</span>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              isRecorded(file.originalName) 
+                                ? 'bg-blue-100 text-blue-700' 
+                                : 'bg-green-100 text-green-700'
+                            }`}>
+                              {isRecorded(file.originalName) ? 'Recorded' : 'Uploaded'}
+                            </span>
+                            <span>•</span>
+                            <span>{new Date(file.createdAt).toLocaleDateString()}</span>
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
@@ -321,7 +397,7 @@ export default function AudioManagement() {
                           variant="ghost"
                           className="text-gray-600 hover:text-medical-teal"
                           title={playingAudioId === file.id ? "Pause Audio" : "Play Audio"}
-                          onClick={() => playingAudioId === file.id ? stopAudio() : playAudio(file.id, file.originalName)}
+                          onClick={() => playingAudioId === file.id ? stopAudio() : playAudio(file.id)}
                         >
                           {playingAudioId === file.id ? <Pause size={16} /> : <Play size={16} />}
                         </Button>
