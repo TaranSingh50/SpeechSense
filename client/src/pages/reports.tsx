@@ -358,7 +358,7 @@ export default function Reports() {
                           <div>
                             <h4 className="font-medium text-professional-grey">{report.title}</h4>
                             <p className="text-sm text-gray-500">
-                              Generated {new Date(report.createdAt).toLocaleDateString()} • {report.reportType} Report
+                              Generated {report.createdAt ? new Date(report.createdAt).toLocaleDateString() : 'N/A'} • {report.reportType} Report
                             </p>
                           </div>
                         </div>
@@ -375,7 +375,7 @@ export default function Reports() {
                         </div>
                         <div className="text-center p-3 bg-gray-50 rounded-lg">
                           <p className="text-sm text-gray-600">Sections</p>
-                          <p className="text-lg font-bold text-trustworthy-blue">{report.includeSections?.length || 0}</p>
+                          <p className="text-lg font-bold text-trustworthy-blue">{Array.isArray(report.includeSections) ? report.includeSections.length : 0}</p>
                         </div>
                         <div className="text-center p-3 bg-gray-50 rounded-lg">
                           <p className="text-sm text-gray-600">Status</p>

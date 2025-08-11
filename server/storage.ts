@@ -25,6 +25,7 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User>;
+  upsertUser(userData: Partial<User> & { id: string; email: string }): Promise<User>;
   
   // Authentication token operations
   createAuthToken(token: InsertAuthToken): Promise<AuthToken>;
@@ -79,6 +80,24 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async upsertUser(userData: Partial<User> & { id: string; email: string }): Promise<User> {
+    const existingUser = await this.getUser(userData.id);
+    if (existingUser) {
+      return await this.updateUser(userData.id, userData);
+    } else {
+      return await this.createUser({
+        id: userData.id,
+        email: userData.email,
+        password: '', // Empty password for OAuth users
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        profileImageUrl: userData.profileImageUrl,
+        accountType: userData.accountType || 'patient',
+        isEmailVerified: true, // OAuth users are pre-verified
+      });
+    }
+  }
+
   // Authentication token operations
   async createAuthToken(tokenData: InsertAuthToken): Promise<AuthToken> {
     const [token] = await db.insert(authTokens).values(tokenData).returning();
@@ -90,7 +109,7 @@ export class DatabaseStorage implements IStorage {
     const [authToken] = await db
       .select()
       .from(authTokens)
-      .where(and(eq(authTokens.token, token), lt(now, authTokens.expiresAt)));
+      .where(and(eq(authTokens.token, token), lt(authTokens.expiresAt, now)));
     return authToken;
   }
 
@@ -113,7 +132,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteExpiredTokens(): Promise<void> {
     const now = new Date();
-    await db.delete(authTokens).where(lt(authTokens.expiresAt, now.toISOString()));
+    await db.delete(authTokens).where(lt(authTokens.expiresAt, now));
   }
 
   // Audio file operations
@@ -169,7 +188,7 @@ export class DatabaseStorage implements IStorage {
 
   // Report operations
   async createReport(report: InsertReport): Promise<Report> {
-    const [result] = await db.insert(reports).values([report]).returning();
+    const [result] = await db.insert(reports).values(report).returning();
     return result;
   }
 
@@ -247,6 +266,24 @@ export class MemStorage implements IStorage {
     return updatedUser;
   }
 
+  async upsertUser(userData: Partial<User> & { id: string; email: string }): Promise<User> {
+    const existingUser = this.users.get(userData.id);
+    if (existingUser) {
+      return await this.updateUser(userData.id, userData);
+    } else {
+      return await this.createUser({
+        id: userData.id,
+        email: userData.email,
+        password: '', // Empty password for OAuth users
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        profileImageUrl: userData.profileImageUrl,
+        accountType: userData.accountType || 'patient',
+        isEmailVerified: true, // OAuth users are pre-verified
+      });
+    }
+  }
+
   // Authentication token operations
   async createAuthToken(tokenData: InsertAuthToken): Promise<AuthToken> {
     const id = `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -254,7 +291,6 @@ export class MemStorage implements IStorage {
       id,
       ...tokenData,
       createdAt: new Date(),
-      updatedAt: new Date(),
     };
     this.authTokens.set(tokenData.token, authToken);
     return authToken;
@@ -294,7 +330,6 @@ export class MemStorage implements IStorage {
       id,
       ...audioFileData,
       createdAt: new Date(),
-      updatedAt: new Date(),
     };
     this.audioFiles.set(id, audioFile);
     return audioFile;
@@ -307,7 +342,7 @@ export class MemStorage implements IStorage {
   async getUserAudioFiles(userId: string): Promise<AudioFile[]> {
     return Array.from(this.audioFiles.values())
       .filter(file => file.userId === userId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      .sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
   }
 
   async deleteAudioFile(id: string): Promise<void> {
