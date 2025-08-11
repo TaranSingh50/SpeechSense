@@ -75,18 +75,13 @@ export default function SpeechAnalysis() {
     enabled: !!user,
   });
 
-  // Fetch analyses with polling for processing status
+  // Fetch analyses with aggressive polling when processing
   const { data: analyses = [] } = useQuery<Analysis[]>({
     queryKey: ["/api/analysis"],
     enabled: !!user,
-    refetchInterval: (query) => {
-      const queryData = query.state.data;
-      const analysesArray = Array.isArray(queryData) ? queryData : [];
-      const hasProcessingAnalyses = analysesArray.some((analysis: Analysis) => 
-        analysis.status === 'processing' || analysis.status === 'pending'
-      );
-      return hasProcessingAnalyses ? 3000 : false;
-    },
+    refetchInterval: 3000, // Always poll every 3 seconds to catch status changes
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 
   // Start analysis mutation
@@ -236,6 +231,8 @@ export default function SpeechAnalysis() {
     if (currentAnalysis && analyses.length > 0) {
       const updatedAnalysis = analyses.find(a => a.id === currentAnalysis.id);
       console.log("Found updated analysis:", updatedAnalysis);
+      console.log("All analysis IDs:", analyses.map(a => a.id));
+      console.log("Looking for ID:", currentAnalysis.id);
       
       if (updatedAnalysis && updatedAnalysis.status !== currentAnalysis.status) {
         console.log("Status changed from", currentAnalysis.status, "to", updatedAnalysis.status);
