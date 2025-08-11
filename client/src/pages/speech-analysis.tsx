@@ -26,7 +26,7 @@ import {
   FileText,
   HardDrive
 } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 
 interface AudioFile {
   id: string;
@@ -61,12 +61,18 @@ export default function SpeechAnalysis() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [location] = useLocation();
   const [selectedAudioFile, setSelectedAudioFile] = useState<string>('');
   const [currentAnalysis, setCurrentAnalysis] = useState<Analysis | null>(null);
   const [showPDFPreview, setShowPDFPreview] = useState(false);
   const [pdfZoom, setPdfZoom] = useState(100);
+  const [existingAnalysis, setExistingAnalysis] = useState<Analysis | null>(null);
 
   const [analysisTimeout, setAnalysisTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  // Extract audioId from URL parameters
+  const urlParams = new URLSearchParams(location.split('?')[1] || '');
+  const audioIdFromUrl = urlParams.get('audioId');
 
   // Fetch audio files
   const { data: audioFiles = [] } = useQuery<AudioFile[]>({
@@ -84,6 +90,32 @@ export default function SpeechAnalysis() {
     staleTime: 0, // Always consider data stale
     gcTime: 0, // Don't cache data
   });
+
+  // Auto-select audio file from URL and check for existing analysis
+  useEffect(() => {
+    if (audioIdFromUrl && audioFiles.length > 0) {
+      const audioFile = audioFiles.find(file => file.id === audioIdFromUrl);
+      if (audioFile) {
+        setSelectedAudioFile(audioIdFromUrl);
+        
+        // Check if analysis already exists for this audio file
+        const existingAnalysisForFile = analyses.find(analysis => 
+          analysis.audioFileId === audioIdFromUrl && analysis.status === 'completed'
+        );
+        
+        if (existingAnalysisForFile) {
+          setExistingAnalysis(existingAnalysisForFile);
+          setCurrentAnalysis(existingAnalysisForFile);
+          toast({
+            title: "Existing Analysis Found",
+            description: "Displaying previously completed analysis for this audio file.",
+          });
+        } else {
+          setExistingAnalysis(null);
+        }
+      }
+    }
+  }, [audioIdFromUrl, audioFiles, analyses]);
 
   // Start analysis mutation
   const startAnalysisMutation = useMutation<Analysis, Error, string>({
@@ -211,8 +243,28 @@ export default function SpeechAnalysis() {
       });
       return;
     }
-    // Reset previous analysis and PDF preview
+
+    // Check if analysis already exists for this audio file
+    const existingAnalysisForFile = analyses.find(analysis => 
+      analysis.audioFileId === selectedAudioFile && analysis.status === 'completed'
+    );
+
+    if (existingAnalysisForFile) {
+      // Use existing analysis - don't create new one
+      setCurrentAnalysis(existingAnalysisForFile);
+      setExistingAnalysis(existingAnalysisForFile);
+      setShowPDFPreview(false);
+      
+      toast({
+        title: "Analysis Retrieved",
+        description: "Displaying existing analysis data for this audio file.",
+      });
+      return;
+    }
+
+    // No existing analysis - create new one
     setCurrentAnalysis(null);
+    setExistingAnalysis(null);
     setShowPDFPreview(false);
     
     // Clear any existing timeout
@@ -312,6 +364,16 @@ export default function SpeechAnalysis() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
+                {audioIdFromUrl && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle className="text-blue-600" size={16} />
+                      <span className="text-sm font-medium text-blue-800">
+                        Auto-selected from {audioIdFromUrl.includes('audio_') ? 'Audio Library' : 'Dashboard'}
+                      </span>
+                    </div>
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Select Audio File
@@ -332,6 +394,20 @@ export default function SpeechAnalysis() {
                   </select>
                 </div>
                 
+                {existingAnalysis && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle className="text-green-600" size={16} />
+                      <span className="text-sm font-medium text-green-800">
+                        Existing analysis found for this file
+                      </span>
+                      <Badge variant="outline" className="ml-auto">
+                        Analyzed on {new Date(existingAnalysis.completedAt || existingAnalysis.createdAt).toLocaleDateString()}
+                      </Badge>
+                    </div>
+                  </div>
+                )}
+
                 <Button
                   onClick={handleStartAnalysis}
                   disabled={!selectedAudioFile || startAnalysisMutation.isPending}
@@ -343,8 +419,16 @@ export default function SpeechAnalysis() {
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Starting Analysis...
                     </>
+                  ) : existingAnalysis ? (
+                    <>
+                      <Eye className="mr-2 h-4 w-4" />
+                      View Existing Analysis
+                    </>
                   ) : (
-                    "Start Analysis"
+                    <>
+                      <TrendingUp className="mr-2 h-4 w-4" />
+                      Start New Analysis
+                    </>
                   )}
                 </Button>
               </div>

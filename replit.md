@@ -61,6 +61,10 @@ SpeechPath is a professional healthcare application designed for speech-language
 - Added proper backend routes for PDF generation, download, and email sharing functionality ✅
 - Implemented user-friendly error handling with "N/A (Could not be calculated)" for missing data ✅
 - Enhanced analysis workflow to only show details after analysis completion, with proper progress indicators ✅
+- Implemented smart navigation from "Analyse Audio" buttons with auto-selection and URL parameters ✅
+- Added conditional analysis logic: fetch existing results vs create new analysis for efficiency ✅  
+- Enhanced Speech Analysis UI with visual indicators for existing vs new analyses ✅
+- Real transcription working with OpenAI Whisper API (falls back to enhanced mock when quota exceeded) ✅
 
 ## User Preferences
 
