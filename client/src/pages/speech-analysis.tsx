@@ -90,13 +90,53 @@ export default function SpeechAnalysis() {
   const startAnalysisMutation = useMutation<Analysis, Error, string>({
     mutationFn: async (audioFileId: string): Promise<Analysis> => {
       const response = await apiRequest("POST", "/api/analysis", { audioFileId });
-      return await response.json();
-    },
-    onSuccess: (data: Analysis) => {
-      // Force immediate refetch instead of just invalidating
-      queryClient.refetchQueries({ queryKey: ["/api/analysis"] });
-      setCurrentAnalysis(data); // Set the analysis we just started
+      const createdAnalysis = await response.json();
       
+      // Wait for analysis to complete by polling the specific analysis
+      let attempts = 0;
+      const maxAttempts = 150; // 5 minutes at 2-second intervals
+      
+      while (attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+        
+        try {
+          const statusResponse = await apiRequest("GET", `/api/analysis/${createdAnalysis.id}`);
+          const updatedAnalysis = await statusResponse.json();
+          
+          if (updatedAnalysis.status === 'completed') {
+            return updatedAnalysis;
+          } else if (updatedAnalysis.status === 'failed') {
+            throw new Error('Analysis failed');
+          }
+          
+          attempts++;
+        } catch (error) {
+          console.error('Error checking analysis status:', error);
+          attempts++;
+        }
+      }
+      
+      throw new Error('Analysis timed out');
+    },
+    onSuccess: (completedAnalysis: Analysis) => {
+      // Clear timeout since analysis completed
+      if (analysisTimeout) {
+        clearTimeout(analysisTimeout);
+        setAnalysisTimeout(null);
+      }
+      
+      // Set the completed analysis directly
+      setCurrentAnalysis(completedAnalysis);
+      
+      // Refresh the analyses list for the library
+      queryClient.refetchQueries({ queryKey: ["/api/analysis"] });
+      
+      toast({
+        title: "Analysis completed",
+        description: "Speech analysis is ready for review.",
+      });
+    },
+    onMutate: () => {
       // Set up timeout for analysis (5 minutes)
       const timeout = setTimeout(() => {
         toast({
@@ -115,6 +155,12 @@ export default function SpeechAnalysis() {
       });
     },
     onError: (error) => {
+      // Clear timeout on error
+      if (analysisTimeout) {
+        clearTimeout(analysisTimeout);
+        setAnalysisTimeout(null);
+      }
+      
       if (isUnauthorizedError(error)) {
         toast({
           title: "Unauthorized",
@@ -122,13 +168,13 @@ export default function SpeechAnalysis() {
           variant: "destructive",
         });
         setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
+          window.location.href = "/login";
+        }, 2000);
         return;
       }
       toast({
         title: "Error",
-        description: "Failed to start analysis. Please try again.",
+        description: error.message || "Failed to start analysis. Please try again.",
         variant: "destructive",
       });
     },
@@ -226,49 +272,7 @@ export default function SpeechAnalysis() {
     sendEmailMutation.mutate({ analysisId, email: emailAddress });
   };
 
-  // Check for current analysis status updates using useEffect
-  useEffect(() => {
-    console.log("Analysis data:", analyses);
-    console.log("Current analysis:", currentAnalysis);
-    
-    if (currentAnalysis && analyses.length > 0) {
-      const updatedAnalysis = analyses.find(a => a.id === currentAnalysis.id);
-      console.log("Found updated analysis:", updatedAnalysis);
-      console.log("All analysis IDs:", analyses.map(a => a.id));
-      console.log("Looking for ID:", currentAnalysis.id);
-      
-      if (updatedAnalysis && updatedAnalysis.status !== currentAnalysis.status) {
-        console.log("Status changed from", currentAnalysis.status, "to", updatedAnalysis.status);
-        setCurrentAnalysis(updatedAnalysis);
-        
-        // Show completion toast when analysis finishes
-        if (updatedAnalysis.status === 'completed') {
-          // Clear timeout since analysis completed successfully
-          if (analysisTimeout) {
-            clearTimeout(analysisTimeout);
-            setAnalysisTimeout(null);
-          }
-          
-          toast({
-            title: "Analysis Complete",
-            description: "Your speech analysis has been completed successfully!",
-          });
-        } else if (updatedAnalysis.status === 'failed') {
-          // Clear timeout since analysis finished (even if failed)
-          if (analysisTimeout) {
-            clearTimeout(analysisTimeout);
-            setAnalysisTimeout(null);
-          }
-          
-          toast({
-            title: "Analysis Failed",
-            description: "The speech analysis could not be completed. Please try again.",
-            variant: "destructive",
-          });
-        }
-      }
-    }
-  }, [analyses, currentAnalysis, toast, analysisTimeout]);
+
 
   // Get selected audio file details (but only show details after analysis starts)
   const selectedAudio = audioFiles.find(file => file.id === selectedAudioFile);
