@@ -2,10 +2,15 @@ import fs from 'fs';
 import path from 'path';
 import OpenAI from 'openai';
 
-// Initialize OpenAI client only if API key is available
-const openai = process.env.OPENAI_API_KEY ? new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-}) : null;
+// Initialize OpenAI client dynamically when needed
+function getOpenAIClient(): OpenAI | null {
+  if (!process.env.OPENAI_API_KEY) {
+    return null;
+  }
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
 
 export async function transcribeAudio(audioFilePath: string): Promise<string> {
   try {
@@ -15,10 +20,12 @@ export async function transcribeAudio(audioFilePath: string): Promise<string> {
     }
 
     console.log(`Processing audio transcription with OpenAI Whisper for: ${audioFilePath}`);
+    console.log(`OpenAI API Key available: ${!!process.env.OPENAI_API_KEY}`);
     
     // Use OpenAI Whisper API for real transcription
     if (process.env.OPENAI_API_KEY) {
       try {
+        console.log('Attempting real Whisper API transcription...');
         const transcription = await transcribeWithWhisper(audioFilePath);
         console.log(`Whisper transcription completed for: ${audioFilePath}`);
         return transcription;
@@ -108,6 +115,7 @@ function estimateDuration(fileSize: number): number {
 // Real implementation with OpenAI Whisper API
 export async function transcribeWithWhisper(audioFilePath: string): Promise<string> {
   try {
+    const openai = getOpenAIClient();
     if (!openai) {
       throw new Error('OpenAI client not initialized - API key not available');
     }
