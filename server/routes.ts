@@ -235,6 +235,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/reports', authenticateToken, async (req, res) => {
     try {
       const userId = req.user!.id;
+      console.log("Report creation request body:", JSON.stringify(req.body, null, 2));
       const reportData = insertReportSchema.parse(req.body);
 
       const report = await storage.createReport({
@@ -245,6 +246,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(report);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error("Zod validation errors:", JSON.stringify(error.errors, null, 2));
         return res.status(400).json({ message: "Invalid report data", errors: error.errors });
       }
       console.error("Error creating report:", error);
