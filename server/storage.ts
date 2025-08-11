@@ -57,21 +57,25 @@ export interface IStorage {
 export class DatabaseStorage implements IStorage {
   // User operations
   async getUser(id: string): Promise<User | undefined> {
+    if (!db) throw new Error('Database not initialized');
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
+    if (!db) throw new Error('Database not initialized');
     const [user] = await db.select().from(users).where(eq(users.email, email));
     return user;
   }
 
   async createUser(userData: InsertUser): Promise<User> {
+    if (!db) throw new Error('Database not initialized');
     const [user] = await db.insert(users).values(userData).returning();
     return user;
   }
 
   async updateUser(id: string, updates: Partial<User>): Promise<User> {
+    if (!db) throw new Error('Database not initialized');
     const [user] = await db
       .update(users)
       .set({ ...updates, updatedAt: new Date() })
@@ -100,11 +104,13 @@ export class DatabaseStorage implements IStorage {
 
   // Authentication token operations
   async createAuthToken(tokenData: InsertAuthToken): Promise<AuthToken> {
+    if (!db) throw new Error('Database not initialized');
     const [token] = await db.insert(authTokens).values(tokenData).returning();
     return token;
   }
 
   async getAuthToken(token: string): Promise<AuthToken | undefined> {
+    if (!db) throw new Error('Database not initialized');
     const now = new Date();
     const [authToken] = await db
       .select()
@@ -114,6 +120,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTokensByUserId(userId: string, type?: string): Promise<AuthToken[]> {
+    if (!db) throw new Error('Database not initialized');
     const conditions = [eq(authTokens.userId, userId)];
     if (type) {
       conditions.push(eq(authTokens.type, type));
@@ -127,26 +134,31 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteAuthToken(token: string): Promise<void> {
+    if (!db) throw new Error('Database not initialized');
     await db.delete(authTokens).where(eq(authTokens.token, token));
   }
 
   async deleteExpiredTokens(): Promise<void> {
+    if (!db) throw new Error('Database not initialized');
     const now = new Date();
     await db.delete(authTokens).where(lt(authTokens.expiresAt, now));
   }
 
   // Audio file operations
   async createAudioFile(audioFile: InsertAudioFile): Promise<AudioFile> {
+    if (!db) throw new Error('Database not initialized');
     const [file] = await db.insert(audioFiles).values(audioFile).returning();
     return file;
   }
 
   async getAudioFile(id: string): Promise<AudioFile | undefined> {
+    if (!db) throw new Error('Database not initialized');
     const [file] = await db.select().from(audioFiles).where(eq(audioFiles.id, id));
     return file;
   }
 
   async getUserAudioFiles(userId: string): Promise<AudioFile[]> {
+    if (!db) throw new Error('Database not initialized');
     return await db
       .select()
       .from(audioFiles)
@@ -155,21 +167,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteAudioFile(id: string): Promise<void> {
+    if (!db) throw new Error('Database not initialized');
     await db.delete(audioFiles).where(eq(audioFiles.id, id));
   }
 
   // Speech analysis operations
   async createSpeechAnalysis(analysis: InsertSpeechAnalysis): Promise<SpeechAnalysis> {
+    if (!db) throw new Error('Database not initialized');
     const [result] = await db.insert(speechAnalyses).values(analysis).returning();
     return result;
   }
 
   async getSpeechAnalysis(id: string): Promise<SpeechAnalysis | undefined> {
+    if (!db) throw new Error('Database not initialized');
     const [analysis] = await db.select().from(speechAnalyses).where(eq(speechAnalyses.id, id));
     return analysis;
   }
 
   async updateSpeechAnalysis(id: string, updates: Partial<SpeechAnalysis>): Promise<SpeechAnalysis> {
+    if (!db) throw new Error('Database not initialized');
     const [analysis] = await db
       .update(speechAnalyses)
       .set(updates)
@@ -179,6 +195,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserAnalyses(userId: string): Promise<SpeechAnalysis[]> {
+    if (!db) throw new Error('Database not initialized');
     return await db
       .select()
       .from(speechAnalyses)
@@ -188,16 +205,19 @@ export class DatabaseStorage implements IStorage {
 
   // Report operations
   async createReport(report: InsertReport): Promise<Report> {
+    if (!db) throw new Error('Database not initialized');
     const [result] = await db.insert(reports).values(report).returning();
     return result;
   }
 
   async getReport(id: string): Promise<Report | undefined> {
+    if (!db) throw new Error('Database not initialized');
     const [report] = await db.select().from(reports).where(eq(reports.id, id));
     return report;
   }
 
   async getUserReports(userId: string): Promise<Report[]> {
+    if (!db) throw new Error('Database not initialized');
     return await db
       .select()
       .from(reports)
@@ -206,6 +226,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateReport(id: string, updates: Partial<Report>): Promise<Report> {
+    if (!db) throw new Error('Database not initialized');
     const [report] = await db
       .update(reports)
       .set(updates)
@@ -215,6 +236,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteReport(id: string): Promise<void> {
+    if (!db) throw new Error('Database not initialized');
     await db.delete(reports).where(eq(reports.id, id));
   }
 }
@@ -316,11 +338,13 @@ export class MemStorage implements IStorage {
 
   async deleteExpiredTokens(): Promise<void> {
     const now = new Date();
-    for (const [token, authToken] of this.authTokens.entries()) {
+    const tokensToDelete: string[] = [];
+    this.authTokens.forEach((authToken, token) => {
       if (authToken.expiresAt <= now) {
-        this.authTokens.delete(token);
+        tokensToDelete.push(token);
       }
-    }
+    });
+    tokensToDelete.forEach(token => this.authTokens.delete(token));
   }
 
   // Audio file operations
@@ -329,6 +353,7 @@ export class MemStorage implements IStorage {
     const audioFile: AudioFile = {
       id,
       ...audioFileData,
+      duration: audioFileData.duration || null,
       createdAt: new Date(),
     };
     this.audioFiles.set(id, audioFile);
@@ -354,9 +379,18 @@ export class MemStorage implements IStorage {
     const id = `analysis_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const analysis: SpeechAnalysis = {
       id,
-      ...analysisData,
+      audioFileId: analysisData.audioFileId,
+      userId: analysisData.userId,
+      status: analysisData.status || 'pending',
+      fluencyScore: analysisData.fluencyScore || null,
+      stutteringEvents: analysisData.stutteringEvents || null,
+      speechRate: analysisData.speechRate || null,
+      averagePauseDuration: analysisData.averagePauseDuration || null,
+      confidenceLevel: analysisData.confidenceLevel || null,
+      detectedEvents: analysisData.detectedEvents || null,
+      analysisResults: analysisData.analysisResults || null,
       createdAt: new Date(),
-      updatedAt: new Date(),
+      completedAt: null,
     };
     this.speechAnalyses.set(id, analysis);
     return analysis;
@@ -370,7 +404,7 @@ export class MemStorage implements IStorage {
     const analysis = this.speechAnalyses.get(id);
     if (!analysis) throw new Error("Speech analysis not found");
     
-    const updatedAnalysis = { ...analysis, ...updates, updatedAt: new Date() };
+    const updatedAnalysis = { ...analysis, ...updates };
     this.speechAnalyses.set(id, updatedAnalysis);
     return updatedAnalysis;
   }
@@ -378,7 +412,7 @@ export class MemStorage implements IStorage {
   async getUserAnalyses(userId: string): Promise<SpeechAnalysis[]> {
     return Array.from(this.speechAnalyses.values())
       .filter(analysis => analysis.userId === userId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      .sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
   }
 
   // Report operations
@@ -386,9 +420,16 @@ export class MemStorage implements IStorage {
     const id = `report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const report: Report = {
       id,
-      ...reportData,
+      userId: '',
+      analysisId: reportData.analysisId,
+      patientId: reportData.patientId || null,
+      title: reportData.title,
+      reportType: reportData.reportType,
+      content: reportData.content,
+      includeSections: reportData.includeSections,
+      pdfPath: reportData.pdfPath || null,
+      isShared: reportData.isShared || false,
       createdAt: new Date(),
-      updatedAt: new Date(),
     };
     this.reports.set(id, report);
     return report;
@@ -401,14 +442,14 @@ export class MemStorage implements IStorage {
   async getUserReports(userId: string): Promise<Report[]> {
     return Array.from(this.reports.values())
       .filter(report => report.userId === userId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      .sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
   }
 
   async updateReport(id: string, updates: Partial<Report>): Promise<Report> {
     const report = this.reports.get(id);
     if (!report) throw new Error("Report not found");
     
-    const updatedReport = { ...report, ...updates, updatedAt: new Date() };
+    const updatedReport = { ...report, ...updates };
     this.reports.set(id, updatedReport);
     return updatedReport;
   }
@@ -418,5 +459,5 @@ export class MemStorage implements IStorage {
   }
 }
 
-// Use database storage for persistence
-export const storage = new DatabaseStorage();
+// Use in-memory storage for development (fallback when DATABASE_URL is not available)
+export const storage = process.env.DATABASE_URL ? new DatabaseStorage() : new MemStorage();
