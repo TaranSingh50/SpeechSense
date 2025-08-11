@@ -230,9 +230,15 @@ export default function SpeechAnalysis() {
 
   // Check for current analysis status updates using useEffect
   useEffect(() => {
+    console.log("Analysis data:", analyses);
+    console.log("Current analysis:", currentAnalysis);
+    
     if (currentAnalysis && analyses.length > 0) {
       const updatedAnalysis = analyses.find(a => a.id === currentAnalysis.id);
+      console.log("Found updated analysis:", updatedAnalysis);
+      
       if (updatedAnalysis && updatedAnalysis.status !== currentAnalysis.status) {
+        console.log("Status changed from", currentAnalysis.status, "to", updatedAnalysis.status);
         setCurrentAnalysis(updatedAnalysis);
         
         // Show completion toast when analysis finishes
