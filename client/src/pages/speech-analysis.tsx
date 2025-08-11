@@ -1,61 +1,89 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { useState, useRef } from "react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import { WaveformVisualizer } from "@/components/waveform-visualizer";
+import { formatDuration } from "@/utils/audioUtils";
 import { 
-  Mic, 
+  Play,
+  Pause,
   TrendingUp, 
   FileText, 
   Download, 
-  RotateCcw,
   ArrowLeft,
   Clock,
   CheckCircle,
   AlertCircle,
-  FileAudio
+  FileAudio,
+  Loader2,
+  Eye,
+  Mail,
+  ZoomIn,
+  ZoomOut,
+  FileDown,
+  MessageSquare
 } from "lucide-react";
 import { Link } from "wouter";
+
+interface AudioFile {
+  id: string;
+  originalName: string;
+  fileSize: number;
+  duration?: number;
+}
+
+interface Analysis {
+  id: string;
+  audioFileId: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  fluencyScore?: number;
+  stutteringEvents?: number;
+  speechRate?: number;
+  averagePauseDuration?: number;
+  confidenceLevel?: number;
+  detectedEvents?: Array<{
+    type: string;
+    timestamp: string;
+    duration: number;
+  }>;
+  analysisResults?: any;
+  completedAt?: string;
+  createdAt: string;
+}
 
 export default function SpeechAnalysis() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [selectedAudioFile, setSelectedAudioFile] = useState<string | null>(null);
+  const [selectedAudioFile, setSelectedAudioFile] = useState<string>('');
+  const [currentAnalysis, setCurrentAnalysis] = useState<Analysis | null>(null);
+  const [showPDFPreview, setShowPDFPreview] = useState(false);
+  const [pdfZoom, setPdfZoom] = useState(100);
+  const [emailAddress, setEmailAddress] = useState('');
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [transcription] = useState("This is a sample transcription of the analyzed audio. The patient demonstrated varying speech patterns with some disfluencies noted throughout the session. Repetitions were observed in syllables and words, particularly in the initial portions of phrases.");
 
   // Fetch audio files
-  const { data: audioFiles = [] } = useQuery({
+  const { data: audioFiles = [] } = useQuery<AudioFile[]>({
     queryKey: ["/api/audio"],
     enabled: !!user,
   });
 
   // Fetch analyses with polling for processing status
-  const { data: analyses = [], isLoading: analysesLoading, error: analysesError } = useQuery({
+  const { data: analyses = [] } = useQuery<Analysis[]>({
     queryKey: ["/api/analysis"],
     enabled: !!user,
     refetchInterval: (query) => {
-      // In TanStack Query v5, the callback receives the query object, not just data
       const queryData = query.state.data;
-      console.log('Speech Analysis polling - query data:', queryData);
-      
-      // Ensure data is an array
       const analysesArray = Array.isArray(queryData) ? queryData : [];
-      const hasProcessingAnalyses = analysesArray.some((analysis: any) => 
+      const hasProcessingAnalyses = analysesArray.some((analysis: Analysis) => 
         analysis.status === 'processing' || analysis.status === 'pending'
       );
-      
-      console.log('Speech Analysis polling check:', { 
-        dataType: typeof queryData,
-        isArray: Array.isArray(queryData),
-        dataLength: analysesArray.length,
-        hasProcessing: hasProcessingAnalyses,
-        statuses: analysesArray.map((a: any) => a.status)
-      });
-      
       return hasProcessingAnalyses ? 2000 : false;
     },
   });
@@ -65,8 +93,9 @@ export default function SpeechAnalysis() {
     mutationFn: async (audioFileId: string) => {
       return await apiRequest("POST", "/api/analysis", { audioFileId });
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/analysis"] });
+      setCurrentAnalysis(data);
       toast({
         title: "Analysis started",
         description: "Speech analysis is now processing. This may take a few minutes.",
@@ -92,34 +121,100 @@ export default function SpeechAnalysis() {
     },
   });
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle className="text-health-green" size={20} />;
-      case 'processing':
-        return <Clock className="text-trustworthy-blue animate-spin" size={20} />;
-      case 'failed':
-        return <AlertCircle className="text-red-500" size={20} />;
-      default:
-        return <Clock className="text-gray-400" size={20} />;
+  // Generate PDF mutation
+  const generatePDFMutation = useMutation({
+    mutationFn: async () => {
+      // Mock PDF generation - in real implementation this would call the backend
+      return { pdfUrl: "/mock-pdf-url", success: true };
+    },
+    onSuccess: () => {
+      setShowPDFPreview(true);
+      toast({
+        title: "PDF Generated",
+        description: "Your analysis report PDF has been generated successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to generate PDF. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Send email mutation
+  const sendEmailMutation = useMutation({
+    mutationFn: async (email: string) => {
+      // Mock email sending - in real implementation this would call the backend
+      return await apiRequest("POST", "/api/analysis/send-report", { 
+        analysisId: completedAnalysis?.id,
+        email: email 
+      });
+    },
+    onSuccess: () => {
+      setShowEmailDialog(false);
+      setEmailAddress('');
+      toast({
+        title: "Email Sent",
+        description: `PDF report has been sent to ${emailAddress}`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to send email. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleStartAnalysis = () => {
+    if (!selectedAudioFile) {
+      toast({
+        title: "No file selected",
+        description: "Please select an audio file to analyze.",
+        variant: "destructive",
+      });
+      return;
     }
+    startAnalysisMutation.mutate(selectedAudioFile);
   };
 
-  const getStatusBadge = (status: string) => {
-    const baseClasses = "inline-flex px-3 py-1 text-sm font-medium rounded-full";
-    switch (status) {
-      case 'completed':
-        return `${baseClasses} bg-health-green bg-opacity-10 text-health-green`;
-      case 'processing':
-        return `${baseClasses} bg-trustworthy-blue bg-opacity-10 text-trustworthy-blue`;
-      case 'failed':
-        return `${baseClasses} bg-red-500 bg-opacity-10 text-red-500`;
-      default:
-        return `${baseClasses} bg-gray-100 text-gray-600`;
-    }
+  const handleDownloadPDF = () => {
+    // Mock PDF download - in real implementation this would download the actual file
+    const link = document.createElement('a');
+    link.href = '/mock-analysis-report.pdf';
+    link.download = `speech-analysis-${completedAnalysis?.id}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "Download Started",
+      description: "Your PDF report is being downloaded.",
+    });
   };
 
-  const currentAnalysis = (analyses as any[]).find((a: any) => a.status === 'processing') || (analyses as any[])[0];
+  const handleSendEmail = () => {
+    if (!emailAddress) {
+      toast({
+        title: "No email address",
+        description: "Please enter an email address.",
+        variant: "destructive",
+      });
+      return;
+    }
+    sendEmailMutation.mutate(emailAddress);
+  };
+
+  // Find processing analysis or most recent completed one
+  const processingAnalysis = analyses.find(a => a.status === 'processing' || a.status === 'pending');
+  const completedAnalysis = analyses.find(a => a.status === 'completed');
+  const displayAnalysis = processingAnalysis || completedAnalysis;
+
+  // Get selected audio file details
+  const selectedAudio = audioFiles.find(file => file.id === selectedAudioFile);
 
   return (
     <div className="min-h-screen bg-clinical-white">
@@ -160,218 +255,365 @@ export default function SpeechAnalysis() {
             <p className="text-gray-600">AI-powered stuttering detection and speech pattern analysis</p>
           </div>
 
-          {/* Start New Analysis */}
-          {(audioFiles as any[]).length > 0 && (
-            <Card className="mb-8">
-              <CardContent className="p-6">
-                <h3 className="text-lg font-heading font-semibold text-professional-grey mb-4">Start New Analysis</h3>
-                <div className="flex items-center space-x-4">
+          {/* Start New Analysis Section */}
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <FileAudio className="mr-2" size={20} />
+                Start New Analysis
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Select Audio File
+                  </label>
                   <select 
-                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    value={selectedAudioFile || ''}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-medical-teal focus:border-transparent"
+                    value={selectedAudioFile}
                     onChange={(e) => setSelectedAudioFile(e.target.value)}
+                    data-testid="select-audio-file"
                   >
-                    <option value="">Select an audio file to analyze</option>
-                    {(audioFiles as any[]).map((file: any) => (
+                    <option value="">Choose an audio file to analyze</option>
+                    {audioFiles.map((file) => (
                       <option key={file.id} value={file.id}>
                         {file.originalName} ({(file.fileSize / 1024 / 1024).toFixed(1)} MB)
+                        {file.duration && ` - ${formatDuration(file.duration)}`}
                       </option>
                     ))}
                   </select>
-                  <Button
-                    onClick={() => selectedAudioFile && startAnalysisMutation.mutate(selectedAudioFile)}
-                    disabled={!selectedAudioFile || startAnalysisMutation.isPending}
-                    className="bg-medical-teal hover:bg-medical-teal/90"
-                  >
-                    {startAnalysisMutation.isPending ? "Starting..." : "Start Analysis"}
-                  </Button>
                 </div>
-              </CardContent>
-            </Card>
-          )}
+                
+                <Button
+                  onClick={handleStartAnalysis}
+                  disabled={!selectedAudioFile || startAnalysisMutation.isPending}
+                  className="bg-medical-teal hover:bg-medical-teal/90"
+                  data-testid="button-start-analysis"
+                >
+                  {startAnalysisMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Starting Analysis...
+                    </>
+                  ) : (
+                    "Start Analysis"
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
-          {/* Current Analysis Status */}
-          {currentAnalysis && (
+          {/* Progress Animation */}
+          {processingAnalysis && (
             <Card className="mb-8">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-heading font-semibold text-professional-grey">Current Analysis</h3>
-                  <span className={getStatusBadge(currentAnalysis.status)}>
-                    {currentAnalysis.status}
-                  </span>
-                </div>
-
-                <div className="flex items-center space-x-4 mb-4">
-                  <div className="w-12 h-12 bg-medical-teal bg-opacity-10 rounded-lg flex items-center justify-center">
-                    <FileAudio className="text-medical-teal" size={20} />
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Clock className="mr-2 h-5 w-5 animate-spin text-medical-teal" />
+                  Analysis in Progress
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex-1">
+                      <div className="flex justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700">Processing Audio</span>
+                        <span className="text-sm text-gray-500">
+                          {processingAnalysis.status === 'processing' ? '60%' : '20%'}
+                        </span>
+                      </div>
+                      <Progress 
+                        value={processingAnalysis.status === 'processing' ? 60 : 20} 
+                        className="h-3"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium text-professional-grey">Analysis in progress</p>
-                    <p className="text-sm text-gray-500">
-                      Created: {new Date(currentAnalysis.createdAt).toLocaleString()}
+                  
+                  <div className="flex items-center space-x-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-medical-teal" />
+                    <span className="text-sm text-gray-600">
+                      {processingAnalysis.status === 'processing' 
+                        ? "Analyzing speech patterns and detecting disfluencies..."
+                        : "Initializing analysis pipeline..."
+                      }
+                    </span>
+                  </div>
+                  
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p className="text-sm text-blue-800">
+                      Analysis typically takes 2-5 minutes depending on audio length. 
+                      You can leave this page and return later - we'll save your progress.
                     </p>
                   </div>
                 </div>
-
-                {currentAnalysis.status === 'processing' && (
-                  <div className="mb-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-gray-600">Analysis Progress</span>
-                      <span className="text-sm text-gray-600">Processing...</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div className="bg-medical-teal h-3 rounded-full animate-pulse" style={{width: "60%"}}></div>
-                    </div>
-                  </div>
-                )}
-
-                <p className="text-sm text-gray-600">
-                  {currentAnalysis.status === 'processing' 
-                    ? "Currently processing: Stuttering pattern detection..."
-                    : currentAnalysis.status === 'completed'
-                    ? "Analysis completed successfully"
-                    : "Analysis failed - please try again"
-                  }
-                </p>
               </CardContent>
             </Card>
           )}
 
-          {/* Analysis Results */}
-          {(analyses as any[]).length > 0 ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-              {/* Main Results */}
+          {/* Analysis Details Section */}
+          {completedAnalysis && (
+            <div className="space-y-8">
               <Card>
-                <CardContent className="p-6">
-                  <h3 className="text-lg font-heading font-semibold text-professional-grey mb-4">Detection Results</h3>
-                  
-                  {(analyses as any[]).filter((a: any) => a.status === 'completed').map((analysis: any) => (
-                    <div key={analysis.id} className="space-y-6">
-                      {/* Overall Score */}
-                      <div className="text-center">
-                        <div className="w-24 h-24 bg-medical-teal bg-opacity-10 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <span className="text-2xl font-bold text-medical-teal">
-                            {analysis.fluencyScore ? analysis.fluencyScore.toFixed(1) : '---'}
-                          </span>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <CheckCircle className="mr-2 h-5 w-5 text-health-green" />
+                    Analysis Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {/* Basic File Info */}
+                  <div className="mb-8">
+                    <h3 className="text-lg font-semibold mb-4">Basic File Info</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <Card className="p-4">
+                        <div className="text-center">
+                          <FileAudio className="h-8 w-8 mx-auto mb-2 text-gray-500" />
+                          <p className="text-sm text-gray-600">File Size</p>
+                          <p className="font-semibold" data-testid="text-file-size">
+                            {selectedAudio ? `${(selectedAudio.fileSize / 1024 / 1024).toFixed(1)} MB` : 'N/A'}
+                          </p>
                         </div>
-                        <p className="font-medium text-professional-grey">Fluency Score</p>
-                        <p className="text-sm text-gray-500">Out of 10 (Higher is better)</p>
-                      </div>
-
-                      {/* Detection Metrics */}
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                          <span className="text-sm font-medium text-professional-grey">Stuttering Events</span>
-                          <span className="text-sm font-bold text-warm-orange">
-                            {analysis.stutteringEvents || 0}
-                          </span>
+                      </Card>
+                      
+                      <Card className="p-4">
+                        <div className="text-center">
+                          <Clock className="h-8 w-8 mx-auto mb-2 text-gray-500" />
+                          <p className="text-sm text-gray-600">Audio Duration</p>
+                          <p className="font-semibold" data-testid="text-audio-duration">
+                            {selectedAudio?.duration ? formatDuration(selectedAudio.duration) : 'N/A'}
+                          </p>
                         </div>
-                        
-                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                          <span className="text-sm font-medium text-professional-grey">Speech Rate</span>
-                          <span className="text-sm font-bold text-trustworthy-blue">
-                            {analysis.speechRate ? `${Math.round(analysis.speechRate)} WPM` : 'N/A'}
-                          </span>
+                      </Card>
+                      
+                      <Card className="p-4">
+                        <div className="text-center">
+                          <TrendingUp className="h-8 w-8 mx-auto mb-2 text-gray-500" />
+                          <p className="text-sm text-gray-600">Speech Rate</p>
+                          <p className="font-semibold" data-testid="text-speech-rate">
+                            {completedAnalysis.speechRate ? `${Math.round(completedAnalysis.speechRate)} WPM` : 'N/A'}
+                          </p>
                         </div>
-                        
-                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                          <span className="text-sm font-medium text-professional-grey">Pause Duration</span>
-                          <span className="text-sm font-bold text-health-green">
-                            {analysis.averagePauseDuration ? `${analysis.averagePauseDuration.toFixed(1)}s avg` : 'N/A'}
-                          </span>
+                      </Card>
+                      
+                      <Card className="p-4">
+                        <div className="text-center">
+                          <CheckCircle className="h-8 w-8 mx-auto mb-2 text-gray-500" />
+                          <p className="text-sm text-gray-600">Fluency Score</p>
+                          <p className="font-semibold" data-testid="text-fluency-score">
+                            {completedAnalysis.fluencyScore ? `${completedAnalysis.fluencyScore.toFixed(1)}/10` : 'N/A'}
+                          </p>
                         </div>
-                        
-                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                          <span className="text-sm font-medium text-professional-grey">Confidence Level</span>
-                          <span className="text-sm font-bold text-medical-teal">
-                            {analysis.confidenceLevel ? `${Math.round(analysis.confidenceLevel * 100)}%` : 'N/A'}
-                          </span>
-                        </div>
-                      </div>
+                      </Card>
                     </div>
-                  ))}
-
-                  {analyses.filter((a: any) => a.status === 'completed').length === 0 && (
-                    <div className="text-center py-8">
-                      <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-500">No completed analyses yet</p>
-                      <p className="text-sm text-gray-400">Upload an audio file and start analysis to see results</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Detailed Analysis */}
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="text-lg font-heading font-semibold text-professional-grey mb-4">Pattern Analysis</h3>
-                  
-                  {/* Waveform Visualization */}
-                  <div className="mb-6">
-                    <p className="text-sm text-gray-600 mb-2">Audio Waveform with Stuttering Events</p>
-                    <WaveformVisualizer />
                   </div>
 
-                  {/* Event Timeline */}
+                  {/* Audio Transcription View */}
+                  <div className="mb-8">
+                    <h3 className="text-lg font-semibold mb-4">Audio Transcription</h3>
+                    <Card className="p-6">
+                      <div className="max-h-48 overflow-y-auto bg-gray-50 rounded-lg p-4" data-testid="transcription-view">
+                        <p className="text-gray-800 leading-relaxed">
+                          {transcription}
+                        </p>
+                      </div>
+                      <div className="mt-4 flex items-center space-x-2">
+                        <Badge variant="outline">
+                          <MessageSquare className="mr-1 h-3 w-3" />
+                          Confidence: {completedAnalysis.confidenceLevel ? `${Math.round(completedAnalysis.confidenceLevel * 100)}%` : 'N/A'}
+                        </Badge>
+                        <Badge variant="outline">
+                          Events Detected: {completedAnalysis.stutteringEvents || 0}
+                        </Badge>
+                      </div>
+                    </Card>
+                  </div>
+
+                  {/* PDF Actions */}
                   <div>
-                    <p className="text-sm text-gray-600 mb-3">Detected Events Timeline</p>
-                    <div className="space-y-2 max-h-40 overflow-y-auto">
-                      {analyses
-                        .filter((a: any) => a.status === 'completed')
-                        .flatMap((analysis: any) => analysis.detectedEvents || [])
-                        .map((event: any, index: number) => (
-                          <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm">
-                            <span className="text-professional-grey">{event.timestamp}</span>
-                            <span className="text-warm-orange font-medium">{event.type}</span>
-                            <span className="text-gray-500">{event.duration}s</span>
-                          </div>
-                        ))}
+                    <h3 className="text-lg font-semibold mb-4">PDF Actions</h3>
+                    <div className="flex flex-wrap gap-4 mb-6">
+                      <Button
+                        onClick={() => generatePDFMutation.mutate()}
+                        disabled={generatePDFMutation.isPending}
+                        className="bg-trustworthy-blue hover:bg-trustworthy-blue/90"
+                        data-testid="button-generate-pdf"
+                      >
+                        {generatePDFMutation.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="mr-2 h-4 w-4" />
+                            Generate PDF
+                          </>
+                        )}
+                      </Button>
                       
-                      {analyses.filter((a: any) => a.status === 'completed').length === 0 && (
-                        <div className="text-center py-4">
-                          <p className="text-gray-500 text-sm">No events detected yet</p>
+                      <Button
+                        onClick={handleDownloadPDF}
+                        variant="outline"
+                        disabled={!showPDFPreview}
+                        data-testid="button-download-pdf"
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Download PDF
+                      </Button>
+                      
+                      <Button
+                        onClick={() => setShowEmailDialog(true)}
+                        variant="outline"
+                        disabled={!showPDFPreview}
+                        data-testid="button-share-email"
+                      >
+                        <Mail className="mr-2 h-4 w-4" />
+                        Share via Email
+                      </Button>
+                    </div>
+
+                    {/* PDF Preview */}
+                    {showPDFPreview && (
+                      <Card className="p-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="font-semibold">PDF Preview</h4>
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              onClick={() => setPdfZoom(Math.max(50, pdfZoom - 25))}
+                              size="sm"
+                              variant="outline"
+                              disabled={pdfZoom <= 50}
+                              data-testid="button-zoom-out"
+                            >
+                              <ZoomOut className="h-4 w-4" />
+                            </Button>
+                            <span className="text-sm text-gray-600 min-w-[60px] text-center">
+                              {pdfZoom}%
+                            </span>
+                            <Button
+                              onClick={() => setPdfZoom(Math.min(200, pdfZoom + 25))}
+                              size="sm"
+                              variant="outline"
+                              disabled={pdfZoom >= 200}
+                              data-testid="button-zoom-in"
+                            >
+                              <ZoomIn className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
-                      )}
+                        
+                        <div 
+                          className="border border-gray-300 rounded-lg bg-white p-8 min-h-[600px]"
+                          style={{ transform: `scale(${pdfZoom / 100})`, transformOrigin: 'top left' }}
+                          data-testid="pdf-preview-pane"
+                        >
+                          <div className="max-w-2xl mx-auto">
+                            <div className="text-center mb-8">
+                              <h2 className="text-2xl font-bold text-gray-800">Speech Analysis Report</h2>
+                              <p className="text-gray-600 mt-2">Generated on {new Date().toLocaleDateString()}</p>
+                            </div>
+                            
+                            <div className="space-y-6">
+                              <div>
+                                <h3 className="text-lg font-semibold mb-2">Summary</h3>
+                                <p className="text-gray-700">
+                                  This report contains the results of AI-powered speech analysis including 
+                                  fluency scoring, stuttering event detection, and detailed pattern analysis.
+                                </p>
+                              </div>
+                              
+                              <div>
+                                <h3 className="text-lg font-semibold mb-2">Key Metrics</h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="bg-gray-50 p-3 rounded">
+                                    <p className="text-sm text-gray-600">Fluency Score</p>
+                                    <p className="font-semibold">{completedAnalysis.fluencyScore?.toFixed(1) || 'N/A'}/10</p>
+                                  </div>
+                                  <div className="bg-gray-50 p-3 rounded">
+                                    <p className="text-sm text-gray-600">Speech Rate</p>
+                                    <p className="font-semibold">{completedAnalysis.speechRate ? `${Math.round(completedAnalysis.speechRate)} WPM` : 'N/A'}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Email Dialog */}
+          {showEmailDialog && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <Card className="w-96 max-w-sm">
+                <CardHeader>
+                  <CardTitle>Share Report via Email</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Email Address
+                      </label>
+                      <input
+                        type="email"
+                        value={emailAddress}
+                        onChange={(e) => setEmailAddress(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-medical-teal focus:border-transparent"
+                        placeholder="Enter email address"
+                        data-testid="input-email-address"
+                      />
+                    </div>
+                    
+                    <div className="flex space-x-3">
+                      <Button
+                        onClick={handleSendEmail}
+                        disabled={sendEmailMutation.isPending}
+                        className="bg-medical-teal hover:bg-medical-teal/90 flex-1"
+                        data-testid="button-send-email"
+                      >
+                        {sendEmailMutation.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Sending...
+                          </>
+                        ) : (
+                          "Send Email"
+                        )}
+                      </Button>
+                      <Button
+                        onClick={() => setShowEmailDialog(false)}
+                        variant="outline"
+                        data-testid="button-cancel-email"
+                      >
+                        Cancel
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
-          ) : (
-            <Card className="mb-8">
+          )}
+
+          {/* No Analysis State */}
+          {!displayAnalysis && analyses.length === 0 && (
+            <Card>
               <CardContent className="p-12 text-center">
                 <TrendingUp className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-professional-grey mb-2">No Analyses Yet</h3>
                 <p className="text-gray-500 mb-4">Upload an audio file and start your first speech analysis</p>
-                <Link href="/audio">
+                <Link href="/audio-management">
                   <Button className="bg-medical-teal hover:bg-medical-teal/90">
                     Go to Audio Management
                   </Button>
                 </Link>
               </CardContent>
             </Card>
-          )}
-
-          {/* Action Buttons */}
-          {analyses.some((a: any) => a.status === 'completed') && (
-            <div className="flex space-x-4">
-              <Link href="/reports">
-                <Button className="bg-medical-teal hover:bg-medical-teal/90 text-white">
-                  <FileText className="mr-2" size={16} />
-                  Generate Report
-                </Button>
-              </Link>
-              
-              <Button variant="outline" className="border-trustworthy-blue text-trustworthy-blue hover:bg-trustworthy-blue hover:text-white">
-                <Download className="mr-2" size={16} />
-                Export Analysis
-              </Button>
-              
-              <Button variant="outline">
-                <RotateCcw className="mr-2" size={16} />
-                Re-run Analysis
-              </Button>
-            </div>
           )}
         </div>
       </div>
