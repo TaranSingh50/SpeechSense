@@ -25,7 +25,8 @@ import {
   ArrowLeft,
   Filter,
   SortAsc,
-  CheckCircle
+  CheckCircle,
+  Trash2
 } from "lucide-react";
 import { Link } from "wouter";
 import type { SpeechAnalysis, Report } from "../../../shared/schema";
@@ -97,6 +98,44 @@ export default function Reports() {
       });
     },
   });
+
+  // Delete report mutation
+  const deleteReportMutation = useMutation({
+    mutationFn: async (reportId: string) => {
+      return await apiRequest("DELETE", `/api/reports/${reportId}`, null);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/reports"] });
+      toast({
+        title: "Report deleted",
+        description: "The report has been successfully deleted.",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to delete report. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteReport = (reportId: string, reportTitle: string) => {
+    if (confirm(`Are you sure you want to delete "${reportTitle}"? This action cannot be undone.`)) {
+      deleteReportMutation.mutate(reportId);
+    }
+  };
 
   const handleGenerateReport = () => {
     if (!reportForm.analysisId || !reportForm.title) {
@@ -360,6 +399,16 @@ export default function Reports() {
                         <Button size="sm" variant="outline">
                           <Copy className="mr-2" size={14} />
                           Duplicate
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleDeleteReport(report.id, report.title)}
+                          disabled={deleteReportMutation.isPending}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="mr-2" size={14} />
+                          {deleteReportMutation.isPending ? "Deleting..." : "Delete"}
                         </Button>
                       </div>
                     </div>

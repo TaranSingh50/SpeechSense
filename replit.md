@@ -44,6 +44,8 @@ SpeechPath is a professional healthcare application designed for speech-language
 - Enhanced file upload UI with duration loading states and "NA" fallback for unreadable files ✅
 - Fixed Clinical Reports generation validation error by excluding userId from insert schema ✅
 - Resolved "Invalid report data" error that was preventing report creation ✅
+- Added delete functionality for Clinical Reports with confirmation dialog ✅
+- Reports now display properly in Generated Reports section with full CRUD operations ✅
 
 ## User Preferences
 

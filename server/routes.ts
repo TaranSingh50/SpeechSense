@@ -280,6 +280,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete('/api/reports/:id', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const report = await storage.getReport(req.params.id);
+      
+      if (!report || report.userId !== userId) {
+        return res.status(404).json({ message: "Report not found" });
+      }
+
+      await storage.deleteReport(req.params.id);
+      res.json({ message: "Report deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting report:", error);
+      res.status(500).json({ message: "Failed to delete report" });
+    }
+  });
+
   // Dashboard stats
   app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
     try {
