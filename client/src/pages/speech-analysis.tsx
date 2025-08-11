@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -67,6 +67,7 @@ export default function SpeechAnalysis() {
   const [pdfZoom, setPdfZoom] = useState(100);
   const [emailAddress, setEmailAddress] = useState('');
   const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [analysisTimeout, setAnalysisTimeout] = useState<NodeJS.Timeout | null>(null);
 
   // Fetch audio files
   const { data: audioFiles = [] } = useQuery<AudioFile[]>({
@@ -97,6 +98,19 @@ export default function SpeechAnalysis() {
     onSuccess: (data: Analysis) => {
       queryClient.invalidateQueries({ queryKey: ["/api/analysis"] });
       setCurrentAnalysis(data); // Set the analysis we just started
+      
+      // Set up timeout for analysis (5 minutes)
+      const timeout = setTimeout(() => {
+        toast({
+          title: "Analysis Timeout",
+          description: "The analysis is taking longer than expected. Please try again or contact support.",
+          variant: "destructive",
+        });
+        setCurrentAnalysis(null); // Reset the current analysis
+      }, 5 * 60 * 1000); // 5 minutes
+      
+      setAnalysisTimeout(timeout);
+      
       toast({
         title: "Analysis started",
         description: "Speech analysis is now processing. This may take a few minutes.",
@@ -177,6 +191,13 @@ export default function SpeechAnalysis() {
     // Reset previous analysis and PDF preview
     setCurrentAnalysis(null);
     setShowPDFPreview(false);
+    
+    // Clear any existing timeout
+    if (analysisTimeout) {
+      clearTimeout(analysisTimeout);
+      setAnalysisTimeout(null);
+    }
+    
     startAnalysisMutation.mutate(selectedAudioFile);
   };
 
@@ -207,13 +228,41 @@ export default function SpeechAnalysis() {
     sendEmailMutation.mutate({ analysisId, email: emailAddress });
   };
 
-  // Check for current analysis status updates
-  if (currentAnalysis && analyses.length > 0) {
-    const updatedAnalysis = analyses.find(a => a.id === currentAnalysis.id);
-    if (updatedAnalysis && updatedAnalysis.status !== currentAnalysis.status) {
-      setCurrentAnalysis(updatedAnalysis);
+  // Check for current analysis status updates using useEffect
+  useEffect(() => {
+    if (currentAnalysis && analyses.length > 0) {
+      const updatedAnalysis = analyses.find(a => a.id === currentAnalysis.id);
+      if (updatedAnalysis && updatedAnalysis.status !== currentAnalysis.status) {
+        setCurrentAnalysis(updatedAnalysis);
+        
+        // Show completion toast when analysis finishes
+        if (updatedAnalysis.status === 'completed') {
+          // Clear timeout since analysis completed successfully
+          if (analysisTimeout) {
+            clearTimeout(analysisTimeout);
+            setAnalysisTimeout(null);
+          }
+          
+          toast({
+            title: "Analysis Complete",
+            description: "Your speech analysis has been completed successfully!",
+          });
+        } else if (updatedAnalysis.status === 'failed') {
+          // Clear timeout since analysis finished (even if failed)
+          if (analysisTimeout) {
+            clearTimeout(analysisTimeout);
+            setAnalysisTimeout(null);
+          }
+          
+          toast({
+            title: "Analysis Failed",
+            description: "The speech analysis could not be completed. Please try again.",
+            variant: "destructive",
+          });
+        }
+      }
     }
-  }
+  }, [analyses, currentAnalysis, toast, analysisTimeout]);
 
   // Get selected audio file details (but only show details after analysis starts)
   const selectedAudio = audioFiles.find(file => file.id === selectedAudioFile);
