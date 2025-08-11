@@ -33,6 +33,17 @@ async function performSpeechAnalysis(audioFilePath: string, duration: number) {
   await new Promise(resolve => setTimeout(resolve, 2000));
   console.log(`Speech analysis completed for file: ${audioFilePath}`);
   
+  // Generate mock transcription based on analysis characteristics
+  const transcriptionTemplates = [
+    "Hello, my name is Sarah and I'm here today to discuss my speech patterns. I've been working with a speech therapist for several months now and I can see some improvement in my fluency. Sometimes I still struggle with certain words, particularly when I'm nervous or excited about something.",
+    "Good morning, I'd like to tell you about my experience with stuttering. It's been a journey of ups and downs, but I'm learning to manage it better. The techniques my therapist taught me are really helping, especially the breathing exercises and slow speech patterns.",
+    "Thank you for this opportunity to share my story. Speech therapy has changed my life in so many positive ways. I used to avoid speaking in public, but now I feel more confident expressing myself. There are still challenging moments, but I'm getting better at handling them.",
+    "I want to talk about the importance of support systems when dealing with speech difficulties. My family and friends have been incredibly understanding throughout this process. Their patience and encouragement have made such a difference in my progress.",
+    "The journey to improve my speech has taught me patience and self-acceptance. Every small improvement feels like a victory. I'm learning that perfect fluency isn't the goal - effective communication is what matters most."
+  ];
+  
+  const transcription = transcriptionTemplates[Math.floor(Math.random() * transcriptionTemplates.length)];
+  
   // Mock analysis results - replace with actual AI analysis
   const mockResults = {
     fluencyScore: Math.random() * 3 + 7, // 7-10 range
@@ -45,6 +56,7 @@ async function performSpeechAnalysis(audioFilePath: string, duration: number) {
       { timestamp: "01:07", type: "Prolongation", duration: 1.2 },
       { timestamp: "02:45", type: "Block", duration: 2.1 },
     ],
+    transcription,
   };
   
   return mockResults;
@@ -294,6 +306,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting report:", error);
       res.status(500).json({ message: "Failed to delete report" });
+    }
+  });
+
+  // PDF generation and email routes for Speech Analysis
+  app.post('/api/analysis/generate-pdf', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { analysisId } = req.body;
+      
+      const analysis = await storage.getSpeechAnalysis(analysisId);
+      if (!analysis || analysis.userId !== userId) {
+        return res.status(404).json({ message: "Analysis not found" });
+      }
+
+      // In a real implementation, this would generate an actual PDF
+      res.json({ 
+        success: true, 
+        pdfUrl: `/api/analysis/${analysisId}/pdf`,
+        message: "PDF generated successfully" 
+      });
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      res.status(500).json({ message: "Failed to generate PDF" });
+    }
+  });
+
+  app.get('/api/analysis/:id/pdf', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const analysis = await storage.getSpeechAnalysis(req.params.id);
+      
+      if (!analysis || analysis.userId !== userId) {
+        return res.status(404).json({ message: "Analysis not found" });
+      }
+
+      // In a real implementation, this would serve the actual PDF file
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="speech-analysis-${req.params.id}.pdf"`);
+      res.send('Mock PDF content - In real implementation, this would be actual PDF data');
+    } catch (error) {
+      console.error("Error downloading PDF:", error);
+      res.status(500).json({ message: "Failed to download PDF" });
+    }
+  });
+
+  app.post('/api/analysis/send-report', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { analysisId, email } = req.body;
+      
+      const analysis = await storage.getSpeechAnalysis(analysisId);
+      if (!analysis || analysis.userId !== userId) {
+        return res.status(404).json({ message: "Analysis not found" });
+      }
+
+      // In a real implementation, this would send actual email
+      console.log(`Sending analysis report ${analysisId} to ${email}`);
+      
+      res.json({ 
+        success: true, 
+        message: `Report sent successfully to ${email}` 
+      });
+    } catch (error) {
+      console.error("Error sending email:", error);
+      res.status(500).json({ message: "Failed to send email" });
     }
   });
 

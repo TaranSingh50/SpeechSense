@@ -4,16 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { formatDuration } from "@/utils/audioUtils";
 import { 
-  Play,
-  Pause,
   TrendingUp, 
-  FileText, 
   Download, 
   ArrowLeft,
   Clock,
@@ -25,8 +22,9 @@ import {
   Mail,
   ZoomIn,
   ZoomOut,
-  FileDown,
-  MessageSquare
+  MessageSquare,
+  FileText,
+  HardDrive
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -51,7 +49,10 @@ interface Analysis {
     timestamp: string;
     duration: number;
   }>;
-  analysisResults?: any;
+  analysisResults?: {
+    transcription?: string;
+    [key: string]: any;
+  };
   completedAt?: string;
   createdAt: string;
 }
@@ -61,12 +62,10 @@ export default function SpeechAnalysis() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedAudioFile, setSelectedAudioFile] = useState<string>('');
-  const [currentAnalysis, setCurrentAnalysis] = useState<Analysis | null>(null);
   const [showPDFPreview, setShowPDFPreview] = useState(false);
   const [pdfZoom, setPdfZoom] = useState(100);
   const [emailAddress, setEmailAddress] = useState('');
   const [showEmailDialog, setShowEmailDialog] = useState(false);
-  const [transcription] = useState("This is a sample transcription of the analyzed audio. The patient demonstrated varying speech patterns with some disfluencies noted throughout the session. Repetitions were observed in syllables and words, particularly in the initial portions of phrases.");
 
   // Fetch audio files
   const { data: audioFiles = [] } = useQuery<AudioFile[]>({
@@ -84,7 +83,7 @@ export default function SpeechAnalysis() {
       const hasProcessingAnalyses = analysesArray.some((analysis: Analysis) => 
         analysis.status === 'processing' || analysis.status === 'pending'
       );
-      return hasProcessingAnalyses ? 2000 : false;
+      return hasProcessingAnalyses ? 3000 : false;
     },
   });
 
@@ -93,9 +92,8 @@ export default function SpeechAnalysis() {
     mutationFn: async (audioFileId: string) => {
       return await apiRequest("POST", "/api/analysis", { audioFileId });
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/analysis"] });
-      setCurrentAnalysis(data);
       toast({
         title: "Analysis started",
         description: "Speech analysis is now processing. This may take a few minutes.",
@@ -123,9 +121,8 @@ export default function SpeechAnalysis() {
 
   // Generate PDF mutation
   const generatePDFMutation = useMutation({
-    mutationFn: async () => {
-      // Mock PDF generation - in real implementation this would call the backend
-      return { pdfUrl: "/mock-pdf-url", success: true };
+    mutationFn: async (analysisId: string) => {
+      return await apiRequest("POST", "/api/analysis/generate-pdf", { analysisId });
     },
     onSuccess: () => {
       setShowPDFPreview(true);
@@ -145,12 +142,8 @@ export default function SpeechAnalysis() {
 
   // Send email mutation
   const sendEmailMutation = useMutation({
-    mutationFn: async (email: string) => {
-      // Mock email sending - in real implementation this would call the backend
-      return await apiRequest("POST", "/api/analysis/send-report", { 
-        analysisId: completedAnalysis?.id,
-        email: email 
-      });
+    mutationFn: async (data: { analysisId: string; email: string }) => {
+      return await apiRequest("POST", "/api/analysis/send-report", data);
     },
     onSuccess: () => {
       setShowEmailDialog(false);
@@ -181,11 +174,11 @@ export default function SpeechAnalysis() {
     startAnalysisMutation.mutate(selectedAudioFile);
   };
 
-  const handleDownloadPDF = () => {
-    // Mock PDF download - in real implementation this would download the actual file
+  const handleDownloadPDF = (analysisId: string) => {
+    // Create download link for the actual PDF
     const link = document.createElement('a');
-    link.href = '/mock-analysis-report.pdf';
-    link.download = `speech-analysis-${completedAnalysis?.id}.pdf`;
+    link.href = `/api/analysis/${analysisId}/pdf`;
+    link.download = `speech-analysis-${analysisId}.pdf`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -196,7 +189,7 @@ export default function SpeechAnalysis() {
     });
   };
 
-  const handleSendEmail = () => {
+  const handleSendEmail = (analysisId: string) => {
     if (!emailAddress) {
       toast({
         title: "No email address",
@@ -205,13 +198,12 @@ export default function SpeechAnalysis() {
       });
       return;
     }
-    sendEmailMutation.mutate(emailAddress);
+    sendEmailMutation.mutate({ analysisId, email: emailAddress });
   };
 
   // Find processing analysis or most recent completed one
   const processingAnalysis = analyses.find(a => a.status === 'processing' || a.status === 'pending');
   const completedAnalysis = analyses.find(a => a.status === 'completed');
-  const displayAnalysis = processingAnalysis || completedAnalysis;
 
   // Get selected audio file details
   const selectedAudio = audioFiles.find(file => file.id === selectedAudioFile);
@@ -304,7 +296,7 @@ export default function SpeechAnalysis() {
             </CardContent>
           </Card>
 
-          {/* Progress Animation */}
+          {/* Progress Animation - Only show during processing */}
           {processingAnalysis && (
             <Card className="mb-8">
               <CardHeader>
@@ -320,11 +312,11 @@ export default function SpeechAnalysis() {
                       <div className="flex justify-between mb-2">
                         <span className="text-sm font-medium text-gray-700">Processing Audio</span>
                         <span className="text-sm text-gray-500">
-                          {processingAnalysis.status === 'processing' ? '60%' : '20%'}
+                          {processingAnalysis.status === 'processing' ? '75%' : '25%'}
                         </span>
                       </div>
                       <Progress 
-                        value={processingAnalysis.status === 'processing' ? 60 : 20} 
+                        value={processingAnalysis.status === 'processing' ? 75 : 25} 
                         className="h-3"
                       />
                     </div>
@@ -334,7 +326,7 @@ export default function SpeechAnalysis() {
                     <Loader2 className="h-4 w-4 animate-spin text-medical-teal" />
                     <span className="text-sm text-gray-600">
                       {processingAnalysis.status === 'processing' 
-                        ? "Analyzing speech patterns and detecting disfluencies..."
+                        ? "Analyzing speech patterns and generating transcription..."
                         : "Initializing analysis pipeline..."
                       }
                     </span>
@@ -351,7 +343,7 @@ export default function SpeechAnalysis() {
             </Card>
           )}
 
-          {/* Analysis Details Section */}
+          {/* Analysis Details Section - Only show when analysis is completed */}
           {completedAnalysis && (
             <div className="space-y-8">
               <Card>
@@ -365,10 +357,20 @@ export default function SpeechAnalysis() {
                   {/* Basic File Info */}
                   <div className="mb-8">
                     <h3 className="text-lg font-semibold mb-4">Basic File Info</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                       <Card className="p-4">
                         <div className="text-center">
-                          <FileAudio className="h-8 w-8 mx-auto mb-2 text-gray-500" />
+                          <FileText className="h-8 w-8 mx-auto mb-2 text-gray-500" />
+                          <p className="text-sm text-gray-600">File Name</p>
+                          <p className="font-semibold text-sm" data-testid="text-file-name">
+                            {selectedAudio?.originalName || 'N/A'}
+                          </p>
+                        </div>
+                      </Card>
+                      
+                      <Card className="p-4">
+                        <div className="text-center">
+                          <HardDrive className="h-8 w-8 mx-auto mb-2 text-gray-500" />
                           <p className="text-sm text-gray-600">File Size</p>
                           <p className="font-semibold" data-testid="text-file-size">
                             {selectedAudio ? `${(selectedAudio.fileSize / 1024 / 1024).toFixed(1)} MB` : 'N/A'}
@@ -381,7 +383,10 @@ export default function SpeechAnalysis() {
                           <Clock className="h-8 w-8 mx-auto mb-2 text-gray-500" />
                           <p className="text-sm text-gray-600">Audio Duration</p>
                           <p className="font-semibold" data-testid="text-audio-duration">
-                            {selectedAudio?.duration ? formatDuration(selectedAudio.duration) : 'N/A'}
+                            {selectedAudio?.duration 
+                              ? formatDuration(selectedAudio.duration)
+                              : 'N/A (Could not be calculated)'
+                            }
                           </p>
                         </div>
                       </Card>
@@ -391,39 +396,53 @@ export default function SpeechAnalysis() {
                           <TrendingUp className="h-8 w-8 mx-auto mb-2 text-gray-500" />
                           <p className="text-sm text-gray-600">Speech Rate</p>
                           <p className="font-semibold" data-testid="text-speech-rate">
-                            {completedAnalysis.speechRate ? `${Math.round(completedAnalysis.speechRate)} WPM` : 'N/A'}
-                          </p>
-                        </div>
-                      </Card>
-                      
-                      <Card className="p-4">
-                        <div className="text-center">
-                          <CheckCircle className="h-8 w-8 mx-auto mb-2 text-gray-500" />
-                          <p className="text-sm text-gray-600">Fluency Score</p>
-                          <p className="font-semibold" data-testid="text-fluency-score">
-                            {completedAnalysis.fluencyScore ? `${completedAnalysis.fluencyScore.toFixed(1)}/10` : 'N/A'}
+                            {completedAnalysis.speechRate && isFinite(completedAnalysis.speechRate)
+                              ? `${Math.round(completedAnalysis.speechRate)} WPM`
+                              : 'N/A (Could not be calculated)'
+                            }
                           </p>
                         </div>
                       </Card>
                     </div>
                   </div>
 
-                  {/* Audio Transcription View */}
+                  {/* Audio Transcription Section */}
                   <div className="mb-8">
                     <h3 className="text-lg font-semibold mb-4">Audio Transcription</h3>
                     <Card className="p-6">
                       <div className="max-h-48 overflow-y-auto bg-gray-50 rounded-lg p-4" data-testid="transcription-view">
-                        <p className="text-gray-800 leading-relaxed">
-                          {transcription}
-                        </p>
+                        {completedAnalysis.analysisResults?.transcription ? (
+                          <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
+                            {completedAnalysis.analysisResults.transcription}
+                          </p>
+                        ) : (
+                          <div className="text-center py-8">
+                            <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                            <p className="text-gray-500">
+                              Transcription could not be completed for this audio.
+                            </p>
+                            <p className="text-sm text-gray-400 mt-2">
+                              The audio file may be too short, have poor quality, or contain no speech.
+                            </p>
+                          </div>
+                        )}
                       </div>
                       <div className="mt-4 flex items-center space-x-2">
                         <Badge variant="outline">
                           <MessageSquare className="mr-1 h-3 w-3" />
-                          Confidence: {completedAnalysis.confidenceLevel ? `${Math.round(completedAnalysis.confidenceLevel * 100)}%` : 'N/A'}
+                          Confidence: {completedAnalysis.confidenceLevel && isFinite(completedAnalysis.confidenceLevel) 
+                            ? `${Math.round(completedAnalysis.confidenceLevel * 100)}%` 
+                            : 'N/A'
+                          }
                         </Badge>
                         <Badge variant="outline">
                           Events Detected: {completedAnalysis.stutteringEvents || 0}
+                        </Badge>
+                        <Badge variant="outline">
+                          Fluency Score: {completedAnalysis.fluencyScore && isFinite(completedAnalysis.fluencyScore)
+                            ? `${completedAnalysis.fluencyScore.toFixed(1)}/10`
+                            : 'N/A'
+                          }
                         </Badge>
                       </div>
                     </Card>
@@ -434,7 +453,7 @@ export default function SpeechAnalysis() {
                     <h3 className="text-lg font-semibold mb-4">PDF Actions</h3>
                     <div className="flex flex-wrap gap-4 mb-6">
                       <Button
-                        onClick={() => generatePDFMutation.mutate()}
+                        onClick={() => generatePDFMutation.mutate(completedAnalysis.id)}
                         disabled={generatePDFMutation.isPending}
                         className="bg-trustworthy-blue hover:bg-trustworthy-blue/90"
                         data-testid="button-generate-pdf"
@@ -453,7 +472,7 @@ export default function SpeechAnalysis() {
                       </Button>
                       
                       <Button
-                        onClick={handleDownloadPDF}
+                        onClick={() => handleDownloadPDF(completedAnalysis.id)}
                         variant="outline"
                         disabled={!showPDFPreview}
                         data-testid="button-download-pdf"
@@ -504,7 +523,7 @@ export default function SpeechAnalysis() {
                         </div>
                         
                         <div 
-                          className="border border-gray-300 rounded-lg bg-white p-8 min-h-[600px]"
+                          className="border border-gray-300 rounded-lg bg-white p-8 min-h-[600px] overflow-auto"
                           style={{ transform: `scale(${pdfZoom / 100})`, transformOrigin: 'top left' }}
                           data-testid="pdf-preview-pane"
                         >
@@ -512,30 +531,66 @@ export default function SpeechAnalysis() {
                             <div className="text-center mb-8">
                               <h2 className="text-2xl font-bold text-gray-800">Speech Analysis Report</h2>
                               <p className="text-gray-600 mt-2">Generated on {new Date().toLocaleDateString()}</p>
+                              <p className="text-gray-600">Analysis ID: {completedAnalysis.id}</p>
                             </div>
                             
                             <div className="space-y-6">
                               <div>
-                                <h3 className="text-lg font-semibold mb-2">Summary</h3>
-                                <p className="text-gray-700">
-                                  This report contains the results of AI-powered speech analysis including 
-                                  fluency scoring, stuttering event detection, and detailed pattern analysis.
-                                </p>
+                                <h3 className="text-lg font-semibold mb-2">File Information</h3>
+                                <div className="bg-gray-50 p-4 rounded">
+                                  <p><strong>File:</strong> {selectedAudio?.originalName || 'N/A'}</p>
+                                  <p><strong>Size:</strong> {selectedAudio ? `${(selectedAudio.fileSize / 1024 / 1024).toFixed(1)} MB` : 'N/A'}</p>
+                                  <p><strong>Duration:</strong> {selectedAudio?.duration ? formatDuration(selectedAudio.duration) : 'N/A'}</p>
+                                </div>
                               </div>
                               
                               <div>
-                                <h3 className="text-lg font-semibold mb-2">Key Metrics</h3>
+                                <h3 className="text-lg font-semibold mb-2">Analysis Results</h3>
                                 <div className="grid grid-cols-2 gap-4">
                                   <div className="bg-gray-50 p-3 rounded">
                                     <p className="text-sm text-gray-600">Fluency Score</p>
-                                    <p className="font-semibold">{completedAnalysis.fluencyScore?.toFixed(1) || 'N/A'}/10</p>
+                                    <p className="font-semibold">
+                                      {completedAnalysis.fluencyScore && isFinite(completedAnalysis.fluencyScore) 
+                                        ? `${completedAnalysis.fluencyScore.toFixed(1)}/10` 
+                                        : 'N/A'
+                                      }
+                                    </p>
                                   </div>
                                   <div className="bg-gray-50 p-3 rounded">
                                     <p className="text-sm text-gray-600">Speech Rate</p>
-                                    <p className="font-semibold">{completedAnalysis.speechRate ? `${Math.round(completedAnalysis.speechRate)} WPM` : 'N/A'}</p>
+                                    <p className="font-semibold">
+                                      {completedAnalysis.speechRate && isFinite(completedAnalysis.speechRate) 
+                                        ? `${Math.round(completedAnalysis.speechRate)} WPM` 
+                                        : 'N/A'
+                                      }
+                                    </p>
+                                  </div>
+                                  <div className="bg-gray-50 p-3 rounded">
+                                    <p className="text-sm text-gray-600">Stuttering Events</p>
+                                    <p className="font-semibold">{completedAnalysis.stutteringEvents || 0}</p>
+                                  </div>
+                                  <div className="bg-gray-50 p-3 rounded">
+                                    <p className="text-sm text-gray-600">Confidence</p>
+                                    <p className="font-semibold">
+                                      {completedAnalysis.confidenceLevel && isFinite(completedAnalysis.confidenceLevel)
+                                        ? `${Math.round(completedAnalysis.confidenceLevel * 100)}%`
+                                        : 'N/A'
+                                      }
+                                    </p>
                                   </div>
                                 </div>
                               </div>
+
+                              {completedAnalysis.analysisResults?.transcription && (
+                                <div>
+                                  <h3 className="text-lg font-semibold mb-2">Transcription</h3>
+                                  <div className="bg-gray-50 p-4 rounded">
+                                    <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                                      {completedAnalysis.analysisResults.transcription}
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -548,7 +603,7 @@ export default function SpeechAnalysis() {
           )}
 
           {/* Email Dialog */}
-          {showEmailDialog && (
+          {showEmailDialog && completedAnalysis && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <Card className="w-96 max-w-sm">
                 <CardHeader>
@@ -572,7 +627,7 @@ export default function SpeechAnalysis() {
                     
                     <div className="flex space-x-3">
                       <Button
-                        onClick={handleSendEmail}
+                        onClick={() => handleSendEmail(completedAnalysis.id)}
                         disabled={sendEmailMutation.isPending}
                         className="bg-medical-teal hover:bg-medical-teal/90 flex-1"
                         data-testid="button-send-email"
@@ -601,7 +656,7 @@ export default function SpeechAnalysis() {
           )}
 
           {/* No Analysis State */}
-          {!displayAnalysis && analyses.length === 0 && (
+          {!processingAnalysis && !completedAnalysis && analyses.length === 0 && (
             <Card>
               <CardContent className="p-12 text-center">
                 <TrendingUp className="w-16 h-16 text-gray-400 mx-auto mb-4" />
