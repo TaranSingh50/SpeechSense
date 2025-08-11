@@ -359,7 +359,7 @@ export default function AudioManagement() {
                         >
                           {playingAudioId === file.id ? <Pause size={16} /> : <Play size={16} />}
                         </Button>
-                        <Link href="/analysis">
+                        <Link href={`/analysis?audioId=${file.id}`}>
                           <Button
                             size="sm"
                             variant="ghost"

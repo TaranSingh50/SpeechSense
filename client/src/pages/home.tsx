@@ -352,7 +352,7 @@ export default function Home() {
                           <Button 
                             size="sm" 
                             variant="ghost"
-                            onClick={() => setLocation('/analysis')}
+                            onClick={() => setLocation(`/analysis?audioId=${file.id}`)}
                           >
                             <TrendingUp size={14} />
                           </Button>
