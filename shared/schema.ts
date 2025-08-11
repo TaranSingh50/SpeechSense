@@ -171,6 +171,7 @@ export const insertSpeechAnalysisSchema = createInsertSchema(speechAnalyses).omi
 export const insertReportSchema = createInsertSchema(reports).omit({
   id: true,
   createdAt: true,
+  userId: true, // userId is injected by the server from authenticated user
 });
 
 export const insertAuthTokenSchema = createInsertSchema(authTokens).omit({

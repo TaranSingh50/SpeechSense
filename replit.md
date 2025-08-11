@@ -42,6 +42,8 @@ SpeechPath is a professional healthcare application designed for speech-language
 - Added audio duration detection for file uploads with HTML5 Audio API ✅
 - Implemented real-time duration display in Upload Audio File section showing format like "1:32" ✅
 - Enhanced file upload UI with duration loading states and "NA" fallback for unreadable files ✅
+- Fixed Clinical Reports generation validation error by excluding userId from insert schema ✅
+- Resolved "Invalid report data" error that was preventing report creation ✅
 
 ## User Preferences
 
