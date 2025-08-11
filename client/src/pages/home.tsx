@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { 
   Mic, 
   Users, 
@@ -17,11 +17,13 @@ import {
   Trash2
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { formatDuration, isRecorded, loadAudioDurations } from "@/utils/audioUtils";
 
 export default function Home() {
   const { user, isLoading: authLoading, logoutMutation } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const [audioDurations, setAudioDurations] = useState<Record<string, number>>({});
 
   // Fetch dashboard stats
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -32,9 +34,42 @@ export default function Home() {
   // Fetch recent audio files with polling for immediate updates
   const { data: audioFiles = [], isLoading: audioLoading } = useQuery({
     queryKey: ["/api/audio"],
+    queryFn: async () => {
+      const accessToken = localStorage.getItem("accessToken");
+      const response = await fetch("/api/audio", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      return response.json();
+    },
     enabled: !!user,
     refetchInterval: 5000, // Poll every 5 seconds
   });
+
+  // Load audio durations for dashboard files
+  const loadDashboardDurations = async (files: any[]) => {
+    const accessToken = localStorage.getItem("accessToken");
+    if (!accessToken) return;
+    
+    const newDurations = await loadAudioDurations(files, audioDurations, accessToken);
+    
+    if (Object.keys(newDurations).length > 0) {
+      setAudioDurations(prev => ({ ...prev, ...newDurations }));
+    }
+  };
+
+  // Load durations when audio files change
+  useEffect(() => {
+    if (audioFiles && audioFiles.length > 0) {
+      loadDashboardDurations(audioFiles);
+    }
+  }, [audioFiles]);
 
   // Fetch recent analyses
   const { data: analyses = [], isLoading: analysesLoading } = useQuery({
@@ -293,9 +328,21 @@ export default function Home() {
                           </div>
                           <div>
                             <p className="font-medium text-professional-grey">{file.originalName}</p>
-                            <p className="text-sm text-gray-500">
-                              {(file.fileSize / 1024 / 1024).toFixed(1)} MB • {new Date(file.createdAt).toLocaleDateString()}
-                            </p>
+                            <div className="flex items-center space-x-2 text-sm text-gray-500">
+                              <span>{(file.fileSize / 1024 / 1024).toFixed(1)} MB</span>
+                              <span>•</span>
+                              <span>{audioDurations[file.id] ? formatDuration(audioDurations[file.id]) : 'Loading...'}</span>
+                              <span>•</span>
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                isRecorded(file.originalName) 
+                                  ? 'bg-blue-100 text-blue-700' 
+                                  : 'bg-green-100 text-green-700'
+                              }`}>
+                                {isRecorded(file.originalName) ? 'Recorded' : 'Uploaded'}
+                              </span>
+                              <span>•</span>
+                              <span>{new Date(file.createdAt).toLocaleDateString()}</span>
+                            </div>
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">

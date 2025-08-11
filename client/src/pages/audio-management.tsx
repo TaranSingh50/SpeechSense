@@ -20,31 +20,7 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 
-// Utility function to get audio duration
-const getAudioDuration = (url: string): Promise<number> =>
-  new Promise((resolve, reject) => {
-    const audio = new Audio();
-    audio.src = url;
-    audio.addEventListener('loadedmetadata', () => {
-      resolve(audio.duration);
-    });
-    audio.addEventListener('error', () => {
-      reject(new Error('Failed to load audio'));
-    });
-  });
-
-// Utility function to format duration
-const formatDuration = (seconds: number): string => {
-  if (seconds < 60) {
-    return `${Math.round(seconds)}s`;
-  }
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = Math.round(seconds % 60);
-  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-};
-
-// Utility function to detect if file is recorded or uploaded
-const isRecorded = (filename: string): boolean => filename.startsWith("recording_");
+import { formatDuration, isRecorded, loadAudioDurations } from "@/utils/audioUtils";
 
 export default function AudioManagement() {
   const { user } = useAuth();
@@ -81,30 +57,12 @@ export default function AudioManagement() {
     },
   });
 
-  // Load audio durations for all files
-  const loadAudioDurations = async (files: any[]) => {
-    const newDurations: Record<string, number> = {};
+  // Load audio durations for all files using shared utility
+  const loadAudioDurationsForFiles = async (files: any[]) => {
+    const accessToken = localStorage.getItem("accessToken");
+    if (!accessToken) return;
     
-    for (const file of files) {
-      if (!audioDurations[file.id]) {
-        try {
-          const accessToken = localStorage.getItem("accessToken");
-          const response = await fetch(`/api/audio/${file.id}/stream`, {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          });
-          
-          if (response.ok) {
-            const blob = await response.blob();
-            const url = URL.createObjectURL(blob);
-            const duration = await getAudioDuration(url);
-            newDurations[file.id] = duration;
-            URL.revokeObjectURL(url);
-          }
-        } catch (error) {
-          console.log(`Failed to load duration for ${file.originalName}:`, error);
-        }
-      }
-    }
+    const newDurations = await loadAudioDurations(files, audioDurations, accessToken);
     
     if (Object.keys(newDurations).length > 0) {
       setAudioDurations(prev => ({ ...prev, ...newDurations }));
@@ -114,9 +72,9 @@ export default function AudioManagement() {
   // Load durations when audio files change
   useEffect(() => {
     if (audioFiles && audioFiles.length > 0) {
-      loadAudioDurations(audioFiles);
+      loadAudioDurationsForFiles(audioFiles);
     }
-  }, [audioFiles, audioDurations]);
+  }, [audioFiles]);
 
   // Fetch analyses to check for processing status
   const { data: analyses = [], error: analysesError } = useQuery({
@@ -397,7 +355,7 @@ export default function AudioManagement() {
                           variant="ghost"
                           className="text-gray-600 hover:text-medical-teal"
                           title={playingAudioId === file.id ? "Pause Audio" : "Play Audio"}
-                          onClick={() => playingAudioId === file.id ? stopAudio() : playAudio(file.id)}
+                          onClick={() => playingAudioId === file.id ? stopAudio() : playAudio(file.id, file.originalName)}
                         >
                           {playingAudioId === file.id ? <Pause size={16} /> : <Play size={16} />}
                         </Button>

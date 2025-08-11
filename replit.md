@@ -31,6 +31,9 @@ SpeechPath is a professional healthcare application designed for speech-language
 - Fixed audio file library query authentication and polling system ✅
 - Resolved critical frontend TanStack Query missing queryFn bug ✅
 - Added audio duration detection and uploaded/recorded file labels ✅
+- Fixed duration display bug with "Duration not available" fallback for invalid values ✅
+- Created shared audioUtils.ts for consistent audio handling across components ✅
+- Applied duration and label improvements to Dashboard Recent Audio Files section ✅
 
 ## User Preferences
 
