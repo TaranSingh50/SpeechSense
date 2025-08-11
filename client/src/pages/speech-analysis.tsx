@@ -65,8 +65,7 @@ export default function SpeechAnalysis() {
   const [currentAnalysis, setCurrentAnalysis] = useState<Analysis | null>(null);
   const [showPDFPreview, setShowPDFPreview] = useState(false);
   const [pdfZoom, setPdfZoom] = useState(100);
-  const [emailAddress, setEmailAddress] = useState('');
-  const [showEmailDialog, setShowEmailDialog] = useState(false);
+
   const [analysisTimeout, setAnalysisTimeout] = useState<NodeJS.Timeout | null>(null);
 
   // Fetch audio files
@@ -201,27 +200,7 @@ export default function SpeechAnalysis() {
     },
   });
 
-  // Send email mutation
-  const sendEmailMutation = useMutation({
-    mutationFn: async (data: { analysisId: string; email: string }) => {
-      return await apiRequest("POST", "/api/analysis/send-report", data);
-    },
-    onSuccess: () => {
-      setShowEmailDialog(false);
-      setEmailAddress('');
-      toast({
-        title: "Email Sent",
-        description: `PDF report has been sent to ${emailAddress}`,
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to send email. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
+
 
   const handleStartAnalysis = () => {
     if (!selectedAudioFile) {
@@ -245,32 +224,35 @@ export default function SpeechAnalysis() {
     startAnalysisMutation.mutate(selectedAudioFile);
   };
 
-  const handleDownloadPDF = (analysisId: string) => {
-    // Create download link for the actual PDF
-    const link = document.createElement('a');
-    link.href = `/api/analysis/${analysisId}/pdf`;
-    link.download = `speech-analysis-${analysisId}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    toast({
-      title: "Download Started",
-      description: "Your PDF report is being downloaded.",
-    });
-  };
-
-  const handleSendEmail = (analysisId: string) => {
-    if (!emailAddress) {
+  const handleDownloadPDF = async (analysisId: string) => {
+    try {
+      const response = await apiRequest("GET", `/api/analysis/${analysisId}/pdf`);
+      const blob = await response.blob();
+      
+      // Create blob URL and download
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `speech-analysis-${analysisId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
       toast({
-        title: "No email address",
-        description: "Please enter an email address.",
+        title: "Download Complete",
+        description: "Your PDF report has been downloaded successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Download Failed",
+        description: "Unable to download the PDF. Please try again.",
         variant: "destructive",
       });
-      return;
     }
-    sendEmailMutation.mutate({ analysisId, email: emailAddress });
   };
+
+
 
 
 
@@ -484,7 +466,7 @@ export default function SpeechAnalysis() {
                     <h3 className="text-lg font-semibold mb-4">Audio Transcription</h3>
                     <Card className="p-6">
                       <div className="max-h-48 overflow-y-auto bg-gray-50 rounded-lg p-4" data-testid="transcription-view">
-                        {currentAnalysis.analysisResults?.transcription ? (
+                        {currentAnalysis?.analysisResults?.transcription ? (
                           <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
                             {currentAnalysis.analysisResults.transcription}
                           </p>
@@ -492,10 +474,10 @@ export default function SpeechAnalysis() {
                           <div className="text-center py-8">
                             <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                             <p className="text-gray-500">
-                              Transcription could not be completed for this audio.
+                              Transcription is not available for this analysis.
                             </p>
                             <p className="text-sm text-gray-400 mt-2">
-                              The audio file may be too short, have poor quality, or contain no speech.
+                              Please check the analysis results or try re-running the analysis.
                             </p>
                           </div>
                         )}
@@ -554,15 +536,7 @@ export default function SpeechAnalysis() {
                         Download PDF
                       </Button>
                       
-                      <Button
-                        onClick={() => setShowEmailDialog(true)}
-                        variant="outline"
-                        disabled={!showPDFPreview}
-                        data-testid="button-share-email"
-                      >
-                        <Mail className="mr-2 h-4 w-4" />
-                        Share via Email
-                      </Button>
+
                     </div>
 
                     {/* PDF Preview */}
@@ -570,34 +544,11 @@ export default function SpeechAnalysis() {
                       <Card className="p-6">
                         <div className="flex items-center justify-between mb-4">
                           <h4 className="font-semibold">PDF Preview</h4>
-                          <div className="flex items-center space-x-2">
-                            <Button
-                              onClick={() => setPdfZoom(Math.max(50, pdfZoom - 25))}
-                              size="sm"
-                              variant="outline"
-                              disabled={pdfZoom <= 50}
-                              data-testid="button-zoom-out"
-                            >
-                              <ZoomOut className="h-4 w-4" />
-                            </Button>
-                            <span className="text-sm text-gray-600 min-w-[60px] text-center">
-                              {pdfZoom}%
-                            </span>
-                            <Button
-                              onClick={() => setPdfZoom(Math.min(200, pdfZoom + 25))}
-                              size="sm"
-                              variant="outline"
-                              disabled={pdfZoom >= 200}
-                              data-testid="button-zoom-in"
-                            >
-                              <ZoomIn className="h-4 w-4" />
-                            </Button>
-                          </div>
+
                         </div>
                         
                         <div 
                           className="border border-gray-300 rounded-lg bg-white p-8 min-h-[600px] overflow-auto"
-                          style={{ transform: `scale(${pdfZoom / 100})`, transformOrigin: 'top left' }}
                           data-testid="pdf-preview-pane"
                         >
                           <div className="max-w-2xl mx-auto">
@@ -675,58 +626,8 @@ export default function SpeechAnalysis() {
             </div>
           )}
 
-          {/* Email Dialog */}
-          {showEmailDialog && currentAnalysis && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <Card className="w-96 max-w-sm">
-                <CardHeader>
-                  <CardTitle>Share Report via Email</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Email Address
-                      </label>
-                      <input
-                        type="email"
-                        value={emailAddress}
-                        onChange={(e) => setEmailAddress(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-medical-teal focus:border-transparent"
-                        placeholder="Enter email address"
-                        data-testid="input-email-address"
-                      />
-                    </div>
-                    
-                    <div className="flex space-x-3">
-                      <Button
-                        onClick={() => handleSendEmail(currentAnalysis.id)}
-                        disabled={sendEmailMutation.isPending}
-                        className="bg-medical-teal hover:bg-medical-teal/90 flex-1"
-                        data-testid="button-send-email"
-                      >
-                        {sendEmailMutation.isPending ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Sending...
-                          </>
-                        ) : (
-                          "Send Email"
-                        )}
-                      </Button>
-                      <Button
-                        onClick={() => setShowEmailDialog(false)}
-                        variant="outline"
-                        data-testid="button-cancel-email"
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
+
+
 
           {/* No Analysis State */}
           {!isProcessing && !isCompleted && !currentAnalysis && (
