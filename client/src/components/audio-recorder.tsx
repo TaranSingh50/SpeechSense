@@ -67,7 +67,45 @@ export function AudioRecorder() {
 
   const startRecording = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Check if MediaDevices API is supported
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        toast({
+          title: "Microphone not supported",
+          description: "Your browser doesn't support microphone recording. Please use a modern browser like Chrome, Firefox, or Safari.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check current permission state
+      if ('permissions' in navigator) {
+        try {
+          const permission = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+          if (permission.state === 'denied') {
+            toast({
+              title: "Microphone access denied",
+              description: "Please enable microphone access in your browser settings and refresh the page.",
+              variant: "destructive",
+            });
+            return;
+          }
+        } catch (permError) {
+          console.log("Permission API not fully supported, proceeding with getUserMedia");
+        }
+      }
+
+      toast({
+        title: "Requesting microphone access",
+        description: "Please allow microphone access when prompted by your browser.",
+      });
+
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 44100
+        }
+      });
       const recorder = new MediaRecorder(stream);
       const chunks: BlobPart[] = [];
 
@@ -98,9 +136,33 @@ export function AudioRecorder() {
 
     } catch (error) {
       console.error('Error accessing microphone:', error);
+      
+      // Provide specific error messages based on the error type
+      let title = "Microphone access failed";
+      let description = "Unable to access microphone. Please try again.";
+      
+      if (error instanceof Error) {
+        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+          title = "Microphone access denied";
+          description = "To enable microphone access:\n1. Click the microphone icon in your browser's address bar\n2. Select 'Allow' or 'Always allow'\n3. Refresh this page and try again";
+        } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+          title = "No microphone found";
+          description = "Please ensure a microphone is connected to your device and try again.";
+        } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+          title = "Microphone in use";
+          description = "Your microphone might be in use by another application. Please close other apps and try again.";
+        } else if (error.name === 'OverconstrainedError' || error.name === 'ConstraintNotSatisfiedError') {
+          title = "Microphone settings error";
+          description = "There was an issue with microphone settings. Please try again.";
+        } else if (error.name === 'NotSupportedError') {
+          title = "Browser not supported";
+          description = "Please use a modern browser like Chrome, Firefox, or Safari for audio recording.";
+        }
+      }
+      
       toast({
-        title: "Microphone access denied",
-        description: "Please allow microphone access to record audio.",
+        title,
+        description,
         variant: "destructive",
       });
     }
