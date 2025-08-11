@@ -75,13 +75,15 @@ export default function SpeechAnalysis() {
     enabled: !!user,
   });
 
-  // Fetch analyses with aggressive polling when processing
+  // Fetch analyses with aggressive polling when processing  
   const { data: analyses = [] } = useQuery<Analysis[]>({
     queryKey: ["/api/analysis"],
     enabled: !!user,
-    refetchInterval: 3000, // Always poll every 3 seconds to catch status changes
+    refetchInterval: 2000, // Faster polling every 2 seconds
     refetchOnMount: true,
     refetchOnWindowFocus: true,
+    staleTime: 0, // Always consider data stale
+    gcTime: 0, // Don't cache data
   });
 
   // Start analysis mutation
@@ -91,7 +93,8 @@ export default function SpeechAnalysis() {
       return await response.json();
     },
     onSuccess: (data: Analysis) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/analysis"] });
+      // Force immediate refetch instead of just invalidating
+      queryClient.refetchQueries({ queryKey: ["/api/analysis"] });
       setCurrentAnalysis(data); // Set the analysis we just started
       
       // Set up timeout for analysis (5 minutes)
