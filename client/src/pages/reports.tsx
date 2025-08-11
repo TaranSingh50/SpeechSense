@@ -28,6 +28,7 @@ import {
   CheckCircle
 } from "lucide-react";
 import { Link } from "wouter";
+import type { SpeechAnalysis, Report } from "../../../shared/schema";
 
 export default function Reports() {
   const { user } = useAuth();
@@ -43,16 +44,23 @@ export default function Reports() {
   });
 
   // Fetch analyses for report generation
-  const { data: analyses = [] } = useQuery({
+  const { data: analyses = [] } = useQuery<SpeechAnalysis[]>({
     queryKey: ["/api/analysis"],
     enabled: !!user,
   });
 
   // Fetch existing reports
-  const { data: reports = [], isLoading: reportsLoading } = useQuery({
+  const { data: reports = [], isLoading: reportsLoading, error: reportsError } = useQuery<Report[]>({
     queryKey: ["/api/reports"],
     enabled: !!user,
+    refetchInterval: 5000, // Poll every 5 seconds to see new reports
   });
+  
+  // Debug logging
+  console.log("Reports query - user:", !!user);
+  console.log("Reports query - loading:", reportsLoading);
+  console.log("Reports query - data:", reports);
+  console.log("Reports query - error:", reportsError);
 
   // Generate report mutation
   const generateReportMutation = useMutation({
@@ -104,7 +112,7 @@ export default function Reports() {
       return;
     }
 
-    const selectedAnalysis = analyses.find((a: any) => a.id === reportForm.analysisId);
+    const selectedAnalysis = analyses.find((a) => a.id === reportForm.analysisId);
     
     const reportData = {
       analysisId: reportForm.analysisId,
@@ -122,7 +130,7 @@ export default function Reports() {
     generateReportMutation.mutate(reportData);
   };
 
-  const completedAnalyses = analyses.filter((a: any) => a.status === 'completed');
+  const completedAnalyses = analyses.filter((a) => a.status === 'completed');
 
   return (
     <div className="min-h-screen bg-clinical-white">
@@ -303,9 +311,9 @@ export default function Reports() {
                     </div>
                   ))}
                 </div>
-              ) : (reports as any[]).length > 0 ? (
+              ) : reports.length > 0 ? (
                 <div className="space-y-4">
-                  {(reports as any[]).map((report: any) => (
+                  {reports.map((report) => (
                     <div key={report.id} className="border border-gray-200 rounded-lg p-6 hover:bg-gray-50 transition-colors">
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center space-x-4">
