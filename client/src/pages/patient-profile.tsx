@@ -45,6 +45,7 @@ export default function PatientProfile() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [imageKey, setImageKey] = useState(0); // Force re-render of image
 
   // Profile update form
   const profileForm = useForm<UpdateProfile>({
@@ -75,19 +76,26 @@ export default function PatientProfile() {
       return response.json();
     },
     onSuccess: async (data) => {
+      console.log('Upload response:', data);
+      
       toast({
         title: "Success",
         description: data.message,
       });
       
-      // Clear the selected file and preview immediately
+      // Clear the selected file and preview
       setSelectedFile(null);
       setPreviewUrl(null);
       
-      // Force refetch user data to get updated profile image URL
+      // Force invalidate and refetch user data
+      queryClient.removeQueries({ queryKey: ["/api/auth/user"] });
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
       
-      console.log('Profile picture upload successful:', data);
+      // Force image to re-render with new key
+      setImageKey(prev => prev + 1);
+      
+      console.log('Profile picture upload complete - user data refreshed, image key updated');
     },
     onError: (error: any) => {
       toast({
@@ -230,26 +238,37 @@ export default function PatientProfile() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center space-x-6">
-              <Avatar className="w-24 h-24">
-                <AvatarImage 
-                  src={previewUrl || (user.profileImageUrl ? `${window.location.origin}${user.profileImageUrl}?t=${Date.now()}` : "")} 
-                  alt={`${user.firstName || ''} ${user.lastName || ''}`}
-                  onLoad={() => {
-                    console.log('Profile image loaded successfully');
-                  }}
-                  onError={(e) => {
-                    console.log('Profile image failed to load:', {
-                      url: user.profileImageUrl,
-                      fullUrl: user.profileImageUrl ? `${window.location.origin}${user.profileImageUrl}` : '',
-                      previewUrl
-                    });
-                  }}
-                />
-                <AvatarFallback className="bg-medical-teal text-white text-xl">
-                  {user.firstName?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
-                  {user.lastName?.[0]?.toUpperCase() || ''}
-                </AvatarFallback>
-              </Avatar>
+              <div className="relative">
+                <Avatar className="w-24 h-24">
+                  {(previewUrl || user.profileImageUrl) && (
+                    <img
+                      key={imageKey}
+                      src={
+                        previewUrl || 
+                        `${window.location.origin}${user.profileImageUrl}?v=${imageKey}`
+                      }
+                      alt={`${user.firstName || ''} ${user.lastName || ''}`}
+                      className="w-full h-full object-cover rounded-full"
+                      onLoad={() => {
+                        console.log('Profile image loaded successfully:', user.profileImageUrl);
+                      }}
+                      onError={(e) => {
+                        console.log('Profile image failed to load, falling back to avatar:', {
+                          url: user.profileImageUrl,
+                          fullUrl: user.profileImageUrl ? `${window.location.origin}${user.profileImageUrl}` : '',
+                          previewUrl,
+                          imageKey
+                        });
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  )}
+                  <AvatarFallback className="bg-medical-teal text-white text-xl">
+                    {user.firstName?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
+                    {user.lastName?.[0]?.toUpperCase() || ''}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
               
               <div className="space-y-4">
                 <div>
