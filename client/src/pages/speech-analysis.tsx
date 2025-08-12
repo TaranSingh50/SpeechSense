@@ -8,7 +8,7 @@ import { useState, useEffect } from "react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import { formatDuration } from "@/utils/audioUtils";
+import { formatDuration, isRecorded, loadAudioDurations } from "@/utils/audioUtils";
 import { 
   TrendingUp, 
   Download, 
@@ -67,18 +67,41 @@ export default function SpeechAnalysis() {
   const [showPDFPreview, setShowPDFPreview] = useState(false);
   const [pdfZoom, setPdfZoom] = useState(100);
   const [existingAnalysis, setExistingAnalysis] = useState<Analysis | null>(null);
+  const [audioDurations, setAudioDurations] = useState<Record<string, number>>({});
 
   const [analysisTimeout, setAnalysisTimeout] = useState<NodeJS.Timeout | null>(null);
 
-  // Extract audioId from URL parameters
+  // Extract audioId from URL parameters with better debugging
   const urlParams = new URLSearchParams(location.split('?')[1] || '');
   const audioIdFromUrl = urlParams.get('audioId');
+  console.log("Current location:", location);
+  console.log("URL search part:", location.split('?')[1] || '');
+  console.log("Extracted audioId from URL:", audioIdFromUrl);
 
   // Fetch audio files
   const { data: audioFiles = [] } = useQuery<AudioFile[]>({
     queryKey: ["/api/audio"],
     enabled: !!user,
   });
+
+  // Load audio durations for Speech Analysis files
+  const loadAnalysisDurations = async (files: AudioFile[]) => {
+    const accessToken = localStorage.getItem("accessToken");
+    if (!accessToken) return;
+    
+    const newDurations = await loadAudioDurations(files, audioDurations, accessToken);
+    
+    if (Object.keys(newDurations).length > 0) {
+      setAudioDurations(prev => ({ ...prev, ...newDurations }));
+    }
+  };
+
+  // Load durations when audio files change
+  useEffect(() => {
+    if (audioFiles && audioFiles.length > 0) {
+      loadAnalysisDurations(audioFiles);
+    }
+  }, [audioFiles]);
 
   // Fetch analyses with aggressive polling when processing  
   const { data: analyses = [] } = useQuery<Analysis[]>({
@@ -417,7 +440,9 @@ export default function SpeechAnalysis() {
                     {audioFiles.map((file) => (
                       <option key={file.id} value={file.id}>
                         {file.originalName} ({(file.fileSize / 1024 / 1024).toFixed(1)} MB)
-                        {file.duration && ` - ${formatDuration(file.duration)}`}
+                        {(audioDurations[file.id] || file.duration) && 
+                          ` - ${formatDuration(audioDurations[file.id] || file.duration!)}`
+                        }
                       </option>
                     ))}
                   </select>
@@ -551,8 +576,8 @@ export default function SpeechAnalysis() {
                           <Clock className="h-8 w-8 mx-auto mb-2 text-gray-500" />
                           <p className="text-sm text-gray-600">Audio Duration</p>
                           <p className="font-semibold" data-testid="text-audio-duration">
-                            {selectedAudio?.duration 
-                              ? formatDuration(selectedAudio.duration)
+                            {(selectedAudio?.id && audioDurations[selectedAudio.id]) || selectedAudio?.duration
+                              ? formatDuration((selectedAudio.id && audioDurations[selectedAudio.id]) || selectedAudio.duration!)
                               : 'N/A (Could not be calculated)'
                             }
                           </p>
@@ -677,7 +702,11 @@ export default function SpeechAnalysis() {
                                 <div className="bg-gray-50 p-4 rounded">
                                   <p><strong>File:</strong> {selectedAudio?.originalName || 'N/A'}</p>
                                   <p><strong>Size:</strong> {selectedAudio ? `${(selectedAudio.fileSize / 1024 / 1024).toFixed(1)} MB` : 'N/A'}</p>
-                                  <p><strong>Duration:</strong> {selectedAudio?.duration ? formatDuration(selectedAudio.duration) : 'N/A'}</p>
+                                  <p><strong>Duration:</strong> {
+                                    (selectedAudio?.id && audioDurations[selectedAudio.id]) || selectedAudio?.duration
+                                      ? formatDuration((selectedAudio.id && audioDurations[selectedAudio.id]) || selectedAudio.duration!)
+                                      : 'N/A'
+                                  }</p>
                                 </div>
                               </div>
                               
