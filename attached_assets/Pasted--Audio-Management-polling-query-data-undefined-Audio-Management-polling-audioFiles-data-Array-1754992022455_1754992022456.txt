@@ -1,0 +1,116 @@
+ Audio Management polling - query data: undefined
+ Audio Management polling - audioFiles data: Array(0)
+ Audio Management polling - audioFiles length: 0
+ Audio Management user state: true
+ Audio Management polling check: Object
+ Audio Management polling - query data: undefined
+ Audio Management polling - audioFiles data: Array(0)
+ Audio Management polling - audioFiles length: 0
+ Audio Management user state: true
+ Audio Management polling check: Object
+ Audio Management polling - query data: undefined
+ Audio Management polling - audioFiles data: Array(0)
+ Audio Management polling - audioFiles length: 0
+ Audio Management user state: true
+ Audio Management polling check: Object
+ Audio Management polling - query data: undefined
+ Audio Management polling - audioFiles data: Array(0)
+ Audio Management polling - audioFiles length: 0
+ Audio Management user state: true
+ Audio Management polling check: Object
+ Audio Management polling - query data: Array(0)
+ Audio Management polling - audioFiles data: Array(0)
+ Audio Management polling - audioFiles length: 0
+ Audio Management user state: true
+ Audio Management polling check: Object
+ Audio Management polling - query data: Array(0)
+ Audio Management polling - audioFiles data: Array(0)
+ Audio Management polling - audioFiles length: 0
+ Audio Management user state: true
+ Audio Management polling check: Object
+ Loading duration for recording_1754991762059.wav (2d3f586d-f7b0-4d8d-bfeb-861770a3c77e)
+ Audio Management polling - query data: Array(0)
+ Audio Management polling - audioFiles data: Array(2)
+ Audio Management polling - audioFiles length: 2
+ Audio Management user state: true
+ Audio Management polling check: Object
+ Stream response for recording_1754991762059.wav: 200 OK
+ Blob size for recording_1754991762059.wav: 110285 bytes, type: audio/wav
+ Duration loaded for recording_1754991762059.wav: Infinity seconds
+ Loading duration for file_example_MP3_1MG.mp3 (6b8286d5-5dae-487d-abd1-769f3f9783f0)
+ Stream response for file_example_MP3_1MG.mp3: 200 OK
+ Audio Management polling - query data: Array(0)
+ Audio Management polling - audioFiles data: Array(2)
+ Audio Management polling - audioFiles length: 2
+ Audio Management user state: true
+ Audio Management polling check: Object
+ Audio Management polling - query data: Array(0)
+ Audio Management polling - audioFiles data: Array(2)
+ Audio Management polling - audioFiles length: 2
+ Audio Management user state: true
+ Audio Management polling check: Object
+ Blob size for file_example_MP3_1MG.mp3: 1059386 bytes, type: audio/mpeg
+ Duration loaded for file_example_MP3_1MG.mp3: 57.983265 seconds
+ Audio Management polling - query data: Array(0)
+audio-management.tsx:102 Audio Management polling - audioFiles data: Array(2)
+audio-management.tsx:103 Audio Management polling - audioFiles length: 2
+audio-management.tsx:104 Audio Management user state: true
+audio-management.tsx:112 Audio Management polling check: Object
+audio-management.tsx:101 Audio Management polling - query data: Array(0)
+audio-management.tsx:102 Audio Management polling - audioFiles data: Array(2)
+audio-management.tsx:103 Audio Management polling - audioFiles length: 2
+audio-management.tsx:104 Audio Management user state: true
+audio-management.tsx:112 Audio Management polling check: Object
+audio-management.tsx:101 Audio Management polling - query data: Array(0)
+audio-management.tsx:102 Audio Management polling - audioFiles data: Array(0)
+audio-management.tsx:103 Audio Management polling - audioFiles length: 0
+audio-management.tsx:104 Audio Management user state: true
+audio-management.tsx:112 Audio Management polling check: Object
+audio-management.tsx:101 Audio Management polling - query data: Array(0)
+audio-management.tsx:102 Audio Management polling - audioFiles data: Array(1)
+audio-management.tsx:103 Audio Management polling - audioFiles length: 1
+audio-management.tsx:104 Audio Management user state: true
+audio-management.tsx:112 Audio Management polling check: Object
+audio-management.tsx:101 Audio Management polling - query data: Array(0)
+audio-management.tsx:102 Audio Management polling - audioFiles data: Array(1)
+audio-management.tsx:103 Audio Management polling - audioFiles length: 1
+audio-management.tsx:104 Audio Management user state: true
+audio-management.tsx:112 Audio Management polling check: Object
+audio-recorder.tsx:204 Audio Recorder: Saving recording with duration: 7 seconds
+audio-recorder.tsx:205 Audio Recorder: Blob size: 125109 bytes
+audio-recorder.tsx:206 Audio Recorder: FormData contents: Object
+audio-management.tsx:101 Audio Management polling - query data: Array(0)
+audio-management.tsx:102 Audio Management polling - audioFiles data: Array(0)
+audio-management.tsx:103 Audio Management polling - audioFiles length: 0
+audio-management.tsx:104 Audio Management user state: true
+audio-management.tsx:112 Audio Management polling check: Object
+audio-recorder.tsx:32 Audio recorder: Cache reset completed successfully
+audioUtils.ts:63 Loading duration for recording_1754991965857.wav (045338ff-440f-4ac7-beb1-8c2dd6e9572f)
+audio-management.tsx:101 Audio Management polling - query data: Array(0)
+audio-management.tsx:102 Audio Management polling - audioFiles data: Array(2)
+audio-management.tsx:103 Audio Management polling - audioFiles length: 2
+audio-management.tsx:104 Audio Management user state: true
+audio-management.tsx:112 Audio Management polling check: Object
+audio-management.tsx:101 Audio Management polling - query data: Array(0)
+audio-management.tsx:102 Audio Management polling - audioFiles data: Array(2)
+audio-management.tsx:103 Audio Management polling - audioFiles length: 2
+audio-management.tsx:104 Audio Management user state: true
+audio-management.tsx:112 Audio Management polling check: Object
+audioUtils.ts:69 Stream response for recording_1754991965857.wav: 200 OK
+audio-management.tsx:101 Audio Management polling - query data: Array(0)
+audio-management.tsx:102 Audio Management polling - audioFiles data: Array(2)
+audio-management.tsx:103 Audio Management polling - audioFiles length: 2
+audio-management.tsx:104 Audio Management user state: true
+audio-management.tsx:112 Audio Management polling check: Object
+audioUtils.ts:73 Blob size for recording_1754991965857.wav: 125109 bytes, type: audio/wav
+audioUtils.ts:79 Duration loaded for recording_1754991965857.wav: Infinity seconds
+audio-management.tsx:101 Audio Management polling - query data: Array(0)
+audio-management.tsx:102 Audio Management polling - audioFiles data: Array(2)
+audio-management.tsx:103 Audio Management polling - audioFiles length: 2
+audio-management.tsx:104 Audio Management user state: true
+audio-management.tsx:112 Audio Management polling check: Object
+audio-management.tsx:101 Audio Management polling - query data: Array(0)
+audio-management.tsx:102 Audio Management polling - audioFiles data: Array(2)
+audio-management.tsx:103 Audio Management polling - audioFiles length: 2
+audio-management.tsx:104 Audio Management user state: true
+audio-management.tsx:112 Audio Management polling check: ObjectdataLength: 0dataType: "object"hasProcessing: falseisArray: truestatuses: [][[Prototype]]: Object

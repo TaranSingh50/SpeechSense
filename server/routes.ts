@@ -18,6 +18,8 @@ const upload = multer({
   dest: "uploads/audio",
   limits: {
     fileSize: 50 * 1024 * 1024, // 50MB limit
+    fields: 10, // Allow additional form fields
+    fieldSize: 1024 * 1024, // 1MB field size limit
   },
   fileFilter: (req, file, cb) => {
     const allowedMimes = ["audio/mpeg", "audio/wav", "audio/mp4", "audio/x-m4a"];
@@ -143,11 +145,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/auth', authRoutes);
 
   // Audio File Routes
-  app.post('/api/audio/upload', authenticateToken, upload.single('audio'), async (req, res) => {
+  app.post('/api/audio/upload', authenticateToken, upload.fields([{ name: 'audio', maxCount: 1 }]), async (req, res) => {
     try {
-      if (!req.file) {
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      if (!files || !files.audio || files.audio.length === 0) {
         return res.status(400).json({ message: "No audio file provided" });
       }
+      const audioFile = files.audio[0];
 
       const userId = req.user!.id;
       
@@ -159,23 +163,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let duration: number | null = null;
       if (req.body.duration && !isNaN(parseFloat(req.body.duration))) {
         duration = parseFloat(req.body.duration);
-        console.log(`Parsed duration: ${duration} seconds for file: ${req.file.originalname}`);
+        console.log(`Parsed duration: ${duration} seconds for file: ${audioFile.originalname}`);
       } else {
-        console.log(`No valid duration provided for file: ${req.file.originalname}`);
+        console.log(`No valid duration provided for file: ${audioFile.originalname}`);
       }
       
-      const audioFile = await storage.createAudioFile({
+      const audioFileRecord = await storage.createAudioFile({
         userId,
-        fileName: req.file.filename,
-        originalName: req.file.originalname,
-        fileSize: req.file.size,
-        mimeType: req.file.mimetype,
-        filePath: req.file.path,
+        fileName: audioFile.filename,
+        originalName: audioFile.originalname,
+        fileSize: audioFile.size,
+        mimeType: audioFile.mimetype,
+        filePath: audioFile.path,
         duration,
       });
 
-      console.log(`Audio file created with duration: ${audioFile.duration}`);
-      res.json(audioFile);
+      console.log(`Audio file created with duration: ${audioFileRecord.duration}`);
+      res.json(audioFileRecord);
     } catch (error) {
       console.error("Error uploading audio file:", error);
       res.status(500).json({ message: "Failed to upload audio file" });
