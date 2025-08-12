@@ -354,7 +354,14 @@ export default function Home() {
                             variant="ghost"
                             onClick={() => {
                               console.log(`Dashboard navigating to analysis with audioId: ${file.id}`);
-                              window.location.href = `/analysis?audioId=${file.id}`;
+                              const accessToken = localStorage.getItem("accessToken");
+                              if (!accessToken) {
+                                console.error("No access token found, user needs to login");
+                                setLocation("/login");
+                                return;
+                              }
+                              console.log("Access token found, navigating to analysis");
+                              setLocation(`/analysis?audioId=${file.id}`);
                             }}
                           >
                             <TrendingUp size={14} />

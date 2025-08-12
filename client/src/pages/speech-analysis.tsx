@@ -61,7 +61,7 @@ export default function SpeechAnalysis() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const [selectedAudioFile, setSelectedAudioFile] = useState<string>('');
   const [currentAnalysis, setCurrentAnalysis] = useState<Analysis | null>(null);
   const [showPDFPreview, setShowPDFPreview] = useState(false);
@@ -79,10 +79,23 @@ export default function SpeechAnalysis() {
   console.log("Extracted audioId from URL:", audioIdFromUrl);
 
   // Fetch audio files
-  const { data: audioFiles = [] } = useQuery<AudioFile[]>({
+  const { data: audioFiles = [], isLoading: audioFilesLoading, error: audioFilesError } = useQuery<AudioFile[]>({
     queryKey: ["/api/audio"],
     enabled: !!user,
+    retry: 1,
   });
+
+  // Handle authentication errors
+  useEffect(() => {
+    if (audioFilesError) {
+      console.error("Error loading audio files:", audioFilesError);
+      // Check if it's an auth error
+      if (audioFilesError.message?.includes('401')) {
+        console.log("Authentication error detected, redirecting to login");
+        setLocation('/login');
+      }
+    }
+  }, [audioFilesError, setLocation]);
 
   // Load audio durations for Speech Analysis files
   const loadAnalysisDurations = async (files: AudioFile[]) => {

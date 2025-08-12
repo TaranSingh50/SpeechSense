@@ -18,7 +18,7 @@ import {
   FileAudio,
   ArrowLeft
 } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 
 import { formatDuration, isRecorded, loadAudioDurations } from "@/utils/audioUtils";
 
@@ -26,6 +26,7 @@ export default function AudioManagement() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [audioDurations, setAudioDurations] = useState<Record<string, number>>({});
@@ -366,7 +367,14 @@ export default function AudioManagement() {
                           title="Analyze Audio"
                           onClick={() => {
                             console.log(`Navigating to analysis with audioId: ${file.id}`);
-                            window.location.href = `/analysis?audioId=${file.id}`;
+                            const accessToken = localStorage.getItem("accessToken");
+                            if (!accessToken) {
+                              console.error("No access token found, user needs to login");
+                              window.location.href = "/login";
+                              return;
+                            }
+                            console.log("Access token found, navigating to analysis");
+                            setLocation(`/analysis?audioId=${file.id}`);
                           }}
                         >
                           <TrendingUp size={16} />
