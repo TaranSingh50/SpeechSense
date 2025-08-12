@@ -344,16 +344,11 @@ export default function AudioManagement() {
                                 : 'bg-green-100 text-green-700'
                             }`}>
                               {isRecorded(file.originalName) ? (
-                                <>
-                                  <Mic size={10} />
-                                  <span>Recorded</span>
-                                </>
+                                <Mic size={10} className="inline" />
                               ) : (
-                                <>
-                                  <Upload size={10} />
-                                  <span>Uploaded</span>
-                                </>
+                                <Upload size={10} className="inline" />
                               )}
+                              <span>{isRecorded(file.originalName) ? 'Recorded' : 'Uploaded'}</span>
                             </span>
                             <span>•</span>
                             <span>{new Date(file.createdAt).toLocaleDateString()}</span>
