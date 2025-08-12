@@ -78,6 +78,10 @@ SpeechPath is a professional healthcare application designed for speech-language
 - Resolved profile picture persistence issue by implementing correct image URL serving with localhost paths ✅
 - Added backend API routes for profile management with proper validation and bcrypt password hashing ✅
 - Made patient card clickable in dashboard sidebar to navigate to profile page ✅
+- Fixed profile picture persistence issue where uploaded images disappeared after successful upload ✅
+- Implemented proper cache-busting for profile images with timestamp query parameters ✅
+- Improved profile picture upload workflow to wait for user data refresh before clearing preview ✅
+- Applied consistent profile image handling across dashboard sidebar and profile page ✅
 
 ## User Preferences
 

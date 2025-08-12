@@ -83,14 +83,13 @@ export default function PatientProfile() {
         description: data.message,
       });
       
-      // Clear the selected file and preview
-      setSelectedFile(null);
-      setPreviewUrl(null);
-      
-      // Force invalidate and refetch user data
-      queryClient.removeQueries({ queryKey: ["/api/auth/user"] });
+      // Wait for user data to be refetched before clearing preview
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
+      
+      // Clear the selected file and preview only after successful data update
+      setSelectedFile(null);
+      setPreviewUrl(null);
       
       // Force image to re-render with new key
       setImageKey(prev => prev + 1);
@@ -242,10 +241,10 @@ export default function PatientProfile() {
                 <Avatar className="w-24 h-24">
                   {(previewUrl || user.profileImageUrl) && (
                     <img
-                      key={imageKey}
+                      key={`${imageKey}-${user.profileImageUrl}`}
                       src={
                         previewUrl || 
-                        `${window.location.origin}${user.profileImageUrl}?v=${imageKey}`
+                        `${window.location.origin}${user.profileImageUrl}?v=${Date.now()}`
                       }
                       alt={`${user.firstName || ''} ${user.lastName || ''}`}
                       className="w-full h-full object-cover rounded-full"
