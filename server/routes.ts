@@ -604,9 +604,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hashedNewPassword = await authService.hashPassword(newPassword);
       await storage.updateUserPassword(userId, hashedNewPassword);
       
+      // Log out user by invalidating all their refresh tokens for security
+      const userTokens = await storage.getTokensByUserId(userId, "refresh");
+      for (const token of userTokens) {
+        await storage.deleteAuthToken(token.token);
+      }
+      
+      // Clear refresh token cookie
+      res.clearCookie("refreshToken");
+      
       res.json({
         success: true,
-        message: "Password changed successfully"
+        message: "Password changed successfully",
+        logout: true // Signal frontend to redirect to login
       });
     } catch (error) {
       console.error("Error changing password:", error);

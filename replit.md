@@ -82,6 +82,10 @@ SpeechPath is a professional healthcare application designed for speech-language
 - Implemented proper cache-busting for profile images with timestamp query parameters ✅
 - Improved profile picture upload workflow to wait for user data refresh before clearing preview ✅
 - Applied consistent profile image handling across dashboard sidebar and profile page ✅
+- FINAL FIX: Fixed profile picture persistence by adding profileImageUrl to /api/auth/user endpoint response ✅
+- FINAL FIX: Fixed password change authentication by using consistent scrypt-based hashing instead of bcrypt ✅
+- FINAL FIX: Added automatic logout after password change for security - invalidates all tokens and redirects to login ✅
+- FINAL FIX: Enhanced password change workflow with success message and 2-second delay before logout ✅
 
 ## User Preferences
 

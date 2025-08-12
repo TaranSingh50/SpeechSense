@@ -141,10 +141,19 @@ export default function PatientProfile() {
     onSuccess: (data) => {
       toast({
         title: "Success",
-        description: data.message,
+        description: data.message + " You will be logged out for security.",
       });
       setIsChangePasswordOpen(false);
       passwordForm.reset();
+      
+      // Auto-logout after password change for security
+      setTimeout(() => {
+        // Clear access token and redirect to login
+        localStorage.removeItem("accessToken");
+        queryClient.setQueryData(["/api/auth/user"], null);
+        queryClient.clear();
+        window.location.href = "/auth";
+      }, 2000); // 2 second delay to show the success message
     },
     onError: (error: any) => {
       toast({
