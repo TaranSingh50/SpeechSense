@@ -26,11 +26,30 @@ export default function Home() {
   const [, setLocation] = useLocation();
   const [audioDurations, setAudioDurations] = useState<Record<string, number>>({});
 
-  // Fetch dashboard stats
+  // Fetch dashboard stats with explicit queryFn to force fresh data
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["/api/dashboard/stats"],
+    queryFn: async () => {
+      const accessToken = localStorage.getItem("accessToken");
+      const response = await fetch("/api/dashboard/stats", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        cache: 'no-cache' // Force no caching at HTTP level
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log("Fresh dashboard stats loaded:", data);
+      return data;
+    },
     enabled: !!user,
-    refetchInterval: 3000, // Poll every 3 seconds to keep stats up-to-date
+    refetchInterval: 3000, // Poll every 3 seconds
+    staleTime: 0, 
+    gcTime: 0,
   });
 
   // Fetch recent audio files with polling for immediate updates
