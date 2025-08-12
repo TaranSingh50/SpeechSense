@@ -70,18 +70,23 @@ export default function SpeechAnalysis() {
   const [audioDurations, setAudioDurations] = useState<Record<string, number>>({});
 
   const [analysisTimeout, setAnalysisTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [urlSearch, setUrlSearch] = useState('');
 
-  // Extract audioId from URL parameters with enhanced debugging
-  const locationParts = location.split('?');
-  const searchPart = locationParts[1] || '';
-  const urlParams = new URLSearchParams(searchPart);
+  // Extract audioId from URL parameters using browser's native location
+  // Wouter's location only gives the pathname, not query params
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setUrlSearch(window.location.search);
+    }
+  }, [location]); // Update when route changes
+  
+  const urlParams = new URLSearchParams(urlSearch);
   const audioIdFromUrl = urlParams.get('audioId');
   
   // Enhanced debugging for URL extraction
   console.log("=== URL EXTRACTION DEBUG ===");
-  console.log("Full location:", location);
-  console.log("Location parts:", locationParts);
-  console.log("Search part:", searchPart);
+  console.log("Wouter location (pathname only):", location);
+  console.log("Browser search params:", urlSearch);
   console.log("URLSearchParams entries:", Array.from(urlParams.entries()));
   console.log("Extracted audioId from URL:", audioIdFromUrl);
   console.log("===========================");
