@@ -336,7 +336,11 @@ export default function AudioManagement() {
                           <div className="flex items-center space-x-2 text-sm text-gray-500">
                             <span>{(file.fileSize / 1024 / 1024).toFixed(1)} MB</span>
                             <span>•</span>
-                            <span>{audioDurations[file.id] ? formatDuration(audioDurations[file.id]) : 'Loading...'}</span>
+                            <span>{
+                              file.duration ? formatDuration(file.duration) : 
+                              audioDurations[file.id] ? formatDuration(audioDurations[file.id]) : 
+                              'Loading...'
+                            }</span>
                             <span>•</span>
                             <span className={`px-2 py-1 rounded-full text-xs font-medium inline-flex items-center gap-1 ${
                               isRecorded(file.originalName) 

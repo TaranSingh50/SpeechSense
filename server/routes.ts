@@ -155,17 +155,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const userId = req.user!.id;
       
-      // Debug logging for duration
-      console.log(`Upload request body:`, req.body);
-      console.log(`Duration field:`, req.body.duration, `Type:`, typeof req.body.duration);
-      
       // Get duration from request body (for recorded files) or set to null (for uploaded files)
       let duration: number | null = null;
       if (req.body.duration && !isNaN(parseFloat(req.body.duration))) {
         duration = parseFloat(req.body.duration);
-        console.log(`Parsed duration: ${duration} seconds for file: ${audioFile.originalname}`);
-      } else {
-        console.log(`No valid duration provided for file: ${audioFile.originalname}`);
       }
       
       const audioFileRecord = await storage.createAudioFile({
@@ -178,7 +171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         duration,
       });
 
-      console.log(`Audio file created with duration: ${audioFileRecord.duration}`);
+
       res.json(audioFileRecord);
     } catch (error) {
       console.error("Error uploading audio file:", error);

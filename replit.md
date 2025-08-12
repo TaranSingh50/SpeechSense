@@ -88,6 +88,7 @@ SpeechPath is a professional healthcare application designed for speech-language
 - FINAL FIX: Enhanced password change workflow with success message and 2-second delay before logout ✅
 - MIGRATION COMPLETE: Successfully set up PostgreSQL database with all required tables and schema ✅
 - FIXED DURATION ISSUE: Resolved recorded audio duration calculation problem by sending actual recording time to backend ✅
+- FIXED DURATION DISPLAY: Resolved Audio File Library duration display issue by fixing FormData handling and prioritizing database values ✅
 
 ## User Preferences
 
