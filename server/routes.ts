@@ -534,7 +534,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For now, we'll store the local path
       const profileImageUrl = `/uploads/profiles/${req.file.filename}`;
       
-      await storage.updateUserProfile(userId, { profileImageUrl });
+      console.log(`Updating user ${userId} profile image to: ${profileImageUrl}`);
+      const updatedUser = await storage.updateUserProfile(userId, { profileImageUrl });
+      console.log(`Updated user profile:`, { id: updatedUser.id, profileImageUrl: updatedUser.profileImageUrl });
       
       res.json({ 
         success: true, 

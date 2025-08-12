@@ -167,8 +167,10 @@ router.get("/user", async (req, res) => {
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
+      profileImageUrl: user.profileImageUrl,
       accountType: user.accountType,
       isEmailVerified: user.isEmailVerified,
+      updatedAt: user.updatedAt,
     });
   } catch (error) {
     console.error("Get user error:", error);
