@@ -30,6 +30,7 @@ export default function Home() {
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["/api/dashboard/stats"],
     enabled: !!user,
+    refetchInterval: 3000, // Poll every 3 seconds to keep stats up-to-date
   });
 
   // Fetch recent audio files with polling for immediate updates

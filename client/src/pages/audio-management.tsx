@@ -129,6 +129,8 @@ export default function AudioManagement() {
     onSuccess: async () => {
       // Force complete cache reset for immediate update
       await queryClient.resetQueries({ queryKey: ["/api/audio"] });
+      await queryClient.resetQueries({ queryKey: ["/api/dashboard/stats"] });
+      await queryClient.resetQueries({ queryKey: ["/api/analysis"] });
       toast({
         title: "File deleted",
         description: "Audio file has been successfully deleted.",

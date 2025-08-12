@@ -673,7 +673,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const stats = {
         totalSessions: audioFiles.length,
         activePatients: 1, // For now, just the current user
-        analysisComplete: completedAnalyses.length > 0 ? Math.round((completedAnalyses.length / analyses.length) * 100) : 0,
+        analysisComplete: analyses.length > 0 ? Math.round((completedAnalyses.length / analyses.length) * 100) : 0,
         reportsGenerated: reports.length,
       };
 
