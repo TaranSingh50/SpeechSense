@@ -14,7 +14,8 @@ import {
   Calendar,
   Play,
   BarChart3,
-  Trash2
+  Trash2,
+  FileAudio
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { formatDuration, isRecorded, loadAudioDurations } from "@/utils/audioUtils";
@@ -317,8 +318,12 @@ export default function Home() {
                     {recentAudioFiles.map((file: any) => (
                       <div key={file.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                         <div className="flex items-center space-x-3">
-                          <div className="w-12 h-12 bg-medical-teal bg-opacity-10 rounded-lg flex items-center justify-center">
-                            <Mic className="text-medical-teal" size={16} />
+                          <div className="w-12 h-12 bg-medical-teal rounded-lg flex items-center justify-center">
+                            {isRecorded(file.originalName) ? (
+                              <Mic className="text-white" size={16} />
+                            ) : (
+                              <FileAudio className="text-white" size={16} />
+                            )}
                           </div>
                           <div>
                             <p className="font-medium text-professional-grey">{file.originalName}</p>

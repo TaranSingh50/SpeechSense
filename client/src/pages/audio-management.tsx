@@ -328,8 +328,12 @@ export default function AudioManagement() {
                   {(audioFiles as any[]).map((file: any) => (
                     <div key={file.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                       <div className="flex items-center space-x-4">
-                        <div className="w-12 h-12 bg-medical-teal bg-opacity-10 rounded-lg flex items-center justify-center">
-                          <FileAudio className="text-medical-teal" size={20} />
+                        <div className="w-12 h-12 bg-medical-teal rounded-lg flex items-center justify-center">
+                          {isRecorded(file.originalName) ? (
+                            <Mic className="text-white" size={20} />
+                          ) : (
+                            <FileAudio className="text-white" size={20} />
+                          )}
                         </div>
                         <div>
                           <p className="font-medium text-professional-grey">{file.originalName}</p>
