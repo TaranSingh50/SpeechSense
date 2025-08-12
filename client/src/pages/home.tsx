@@ -223,13 +223,16 @@ export default function Home() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Total Sessions</p>
+                    <div className="flex items-center space-x-2 mb-1">
+                      <Mic className="text-medical-teal" size={16} />
+                      <p className="text-sm font-medium text-gray-600" title="Number of audio analysis sessions">Total Sessions</p>
+                    </div>
                     <p className="text-2xl font-bold text-professional-grey">
                       {statsLoading ? "..." : (stats as any)?.totalSessions || 0}
                     </p>
                   </div>
-                  <div className="h-12 w-12 bg-medical-teal bg-opacity-10 rounded-lg flex items-center justify-center">
-                    <Mic className="text-medical-teal" size={20} />
+                  <div className="h-12 w-12 bg-medical-teal rounded-lg flex items-center justify-center">
+                    <Mic className="text-white" size={20} />
                   </div>
                 </div>
                 <div className="mt-4 flex items-center">
@@ -243,13 +246,16 @@ export default function Home() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Active Patients</p>
+                    <div className="flex items-center space-x-2 mb-1">
+                      <Users className="text-trustworthy-blue" size={16} />
+                      <p className="text-sm font-medium text-gray-600" title="Patients with activity this week">Active Patients</p>
+                    </div>
                     <p className="text-2xl font-bold text-professional-grey">
                       {statsLoading ? "..." : (stats as any)?.activePatients || 1}
                     </p>
                   </div>
-                  <div className="h-12 w-12 bg-trustworthy-blue bg-opacity-10 rounded-lg flex items-center justify-center">
-                    <Users className="text-trustworthy-blue" size={20} />
+                  <div className="h-12 w-12 bg-trustworthy-blue rounded-lg flex items-center justify-center">
+                    <Users className="text-white" size={20} />
                   </div>
                 </div>
                 <div className="mt-4 flex items-center">
@@ -263,13 +269,16 @@ export default function Home() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Analysis Complete</p>
+                    <div className="flex items-center space-x-2 mb-1">
+                      <TrendingUp className="text-health-green" size={16} />
+                      <p className="text-sm font-medium text-gray-600" title="Percentage of completed analyses">Analysis Complete</p>
+                    </div>
                     <p className="text-2xl font-bold text-professional-grey">
                       {statsLoading ? "..." : `${(stats as any)?.analysisComplete || 0}%`}
                     </p>
                   </div>
-                  <div className="h-12 w-12 bg-health-green bg-opacity-10 rounded-lg flex items-center justify-center">
-                    <TrendingUp className="text-health-green" size={20} />
+                  <div className="h-12 w-12 bg-health-green rounded-lg flex items-center justify-center">
+                    <TrendingUp className="text-white" size={20} />
                   </div>
                 </div>
                 <div className="mt-4 flex items-center">
@@ -283,13 +292,16 @@ export default function Home() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Reports Generated</p>
+                    <div className="flex items-center space-x-2 mb-1">
+                      <FileText className="text-warm-orange" size={16} />
+                      <p className="text-sm font-medium text-gray-600" title="Reports ready for download">Reports Generated</p>
+                    </div>
                     <p className="text-2xl font-bold text-professional-grey">
                       {statsLoading ? "..." : (stats as any)?.reportsGenerated || 0}
                     </p>
                   </div>
-                  <div className="h-12 w-12 bg-warm-orange bg-opacity-10 rounded-lg flex items-center justify-center">
-                    <FileText className="text-warm-orange" size={20} />
+                  <div className="h-12 w-12 bg-warm-orange rounded-lg flex items-center justify-center">
+                    <FileText className="text-white" size={20} />
                   </div>
                 </div>
                 <div className="mt-4 flex items-center">
