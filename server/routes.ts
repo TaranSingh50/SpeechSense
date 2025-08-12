@@ -7,6 +7,7 @@ import cookieParser from "cookie-parser";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import bcrypt from "bcrypt";
 import { insertAudioFileSchema, insertSpeechAnalysisSchema, insertReportSchema, updateProfileSchema, changePasswordSchema } from "@shared/schema";
 import { z } from "zod";
 import { generateAnalysisPDF } from "./utils/pdfGenerator";
@@ -594,7 +595,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      const bcrypt = require('bcrypt');
       const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
       if (!isCurrentPasswordValid) {
         return res.status(400).json({ message: "Current password is incorrect" });
