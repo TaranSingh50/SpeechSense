@@ -197,15 +197,7 @@ export default function Home() {
                   <span>Speech Analysis</span>
                 </Link>
               </li>
-              <li>
-                <Link 
-                  href="/reports"
-                  className="flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <FileText size={16} />
-                  <span>Reports</span>
-                </Link>
-              </li>
+
             </ul>
 
             <div className="absolute bottom-6 left-4 right-4">
@@ -229,7 +221,7 @@ export default function Home() {
           </div>
 
           {/* Statistics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
@@ -299,28 +291,7 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="flex items-center space-x-2 mb-1">
-                      <FileText className="text-warm-orange" size={16} />
-                      <p className="text-sm font-medium text-gray-600" title="Reports ready for download">Reports Generated</p>
-                    </div>
-                    <p className="text-2xl font-bold text-professional-grey">
-                      {statsLoading ? "..." : (stats as any)?.reportsGenerated || 0}
-                    </p>
-                  </div>
-                  <div className="h-12 w-12 bg-warm-orange rounded-lg flex items-center justify-center">
-                    <FileText className="text-white" size={20} />
-                  </div>
-                </div>
-                <div className="mt-4 flex items-center">
-                  <span className="text-health-green text-sm font-medium">Ready</span>
-                  <span className="text-gray-500 text-sm ml-1">to download</span>
-                </div>
-              </CardContent>
-            </Card>
+
           </div>
 
           {/* Main Content Grid */}
@@ -442,20 +413,8 @@ export default function Home() {
                     <Upload className="mr-3" size={16} />
                     Upload Audio File
                   </Button>
-                  <Button 
-                    className="w-full bg-health-green hover:bg-health-green/90 text-white justify-start"
-                    onClick={() => setLocation('/reports')}
-                  >
-                    <FileText className="mr-3" size={16} />
-                    Generate Report
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    className="w-full justify-start"
-                  >
-                    <Calendar className="mr-3" size={16} />
-                    Schedule Session
-                  </Button>
+
+
                 </div>
               </CardContent>
             </Card>
