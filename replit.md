@@ -86,6 +86,8 @@ SpeechPath is a professional healthcare application designed for speech-language
 - FINAL FIX: Fixed password change authentication by using consistent scrypt-based hashing instead of bcrypt ✅
 - FINAL FIX: Added automatic logout after password change for security - invalidates all tokens and redirects to login ✅
 - FINAL FIX: Enhanced password change workflow with success message and 2-second delay before logout ✅
+- MIGRATION COMPLETE: Successfully set up PostgreSQL database with all required tables and schema ✅
+- FIXED DURATION ISSUE: Resolved recorded audio duration calculation problem by sending actual recording time to backend ✅
 
 ## User Preferences
 

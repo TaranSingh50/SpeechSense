@@ -199,9 +199,10 @@ export function AudioRecorder() {
       const formData = new FormData();
       const fileName = `recording_${Date.now()}.wav`;
       formData.append('audio', audioBlob, fileName);
+      formData.append('duration', recordingTime.toString());
       uploadMutation.mutate(formData);
     }
-  }, [audioBlob, uploadMutation]);
+  }, [audioBlob, recordingTime, uploadMutation]);
 
   const cancelRecording = useCallback(() => {
     // Clean up audio URL to free memory

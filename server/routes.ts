@@ -150,6 +150,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const userId = req.user!.id;
+      
+      // Get duration from request body (for recorded files) or set to null (for uploaded files)
+      let duration: number | null = null;
+      if (req.body.duration && !isNaN(parseFloat(req.body.duration))) {
+        duration = parseFloat(req.body.duration);
+      }
+      
       const audioFile = await storage.createAudioFile({
         userId,
         fileName: req.file.filename,
@@ -157,7 +164,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fileSize: req.file.size,
         mimeType: req.file.mimetype,
         filePath: req.file.path,
-        duration: null, // Would be calculated from actual audio file
+        duration,
       });
 
       res.json(audioFile);
