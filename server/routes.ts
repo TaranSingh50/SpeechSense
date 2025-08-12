@@ -311,6 +311,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get existing analysis for a specific audio file
+  app.get('/api/analysis/audio/:audioFileId', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { audioFileId } = req.params;
+      
+      // Verify the audio file belongs to the user
+      const audioFile = await storage.getAudioFile(audioFileId);
+      if (!audioFile || audioFile.userId !== userId) {
+        return res.status(404).json({ message: "Audio file not found" });
+      }
+      
+      // Get all analyses for this audio file
+      const analyses = await storage.getUserAnalyses(userId);
+      const audioFileAnalyses = analyses.filter(analysis => 
+        analysis.audioFileId === audioFileId && analysis.status === 'completed'
+      );
+      
+      // Return the most recent completed analysis
+      const mostRecentAnalysis = audioFileAnalyses.length > 0 
+        ? audioFileAnalyses.sort((a, b) => 
+            new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+          )[0]
+        : null;
+      
+      res.json(mostRecentAnalysis);
+    } catch (error) {
+      console.error("Error fetching analysis for audio file:", error);
+      res.status(500).json({ message: "Failed to fetch analysis for audio file" });
+    }
+  });
+
   // Report Routes
   app.post('/api/reports', authenticateToken, async (req, res) => {
     try {

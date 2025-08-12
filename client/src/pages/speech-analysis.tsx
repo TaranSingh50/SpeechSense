@@ -84,38 +84,62 @@ export default function SpeechAnalysis() {
   const { data: analyses = [] } = useQuery<Analysis[]>({
     queryKey: ["/api/analysis"],
     enabled: !!user,
-    refetchInterval: 2000, // Faster polling every 2 seconds
+    refetchInterval: 3000, // Poll every 3 seconds
     refetchOnMount: true,
     refetchOnWindowFocus: true,
     staleTime: 0, // Always consider data stale
     gcTime: 0, // Don't cache data
   });
 
-  // Auto-select audio file from URL and check for existing analysis
+  // Query for existing analysis when auto-selecting from URL
+  const { data: existingAnalysisFromQuery } = useQuery<Analysis | null>({
+    queryKey: ["/api/analysis/audio", audioIdFromUrl],
+    queryFn: async () => {
+      if (!audioIdFromUrl) return null;
+      try {
+        const response = await fetch(`/api/analysis/audio/${audioIdFromUrl}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        });
+        if (response.ok) {
+          return await response.json();
+        }
+        return null;
+      } catch (error) {
+        console.error("Error fetching existing analysis:", error);
+        return null;
+      }
+    },
+    enabled: !!audioIdFromUrl && !!user,
+    staleTime: 0,
+  });
+
+  // Auto-select audio file from URL and handle existing analysis
   useEffect(() => {
     if (audioIdFromUrl && audioFiles.length > 0) {
       const audioFile = audioFiles.find(file => file.id === audioIdFromUrl);
       if (audioFile) {
+        console.log(`Auto-selecting audio file: ${audioFile.originalName} (ID: ${audioIdFromUrl})`);
         setSelectedAudioFile(audioIdFromUrl);
         
-        // Check if analysis already exists for this audio file
-        const existingAnalysisForFile = analyses.find(analysis => 
-          analysis.audioFileId === audioIdFromUrl && analysis.status === 'completed'
-        );
-        
-        if (existingAnalysisForFile) {
-          setExistingAnalysis(existingAnalysisForFile);
-          setCurrentAnalysis(existingAnalysisForFile);
+        // Handle existing analysis from dedicated query
+        if (existingAnalysisFromQuery) {
+          console.log(`Found existing completed analysis for audio file: ${audioIdFromUrl}`);
+          setExistingAnalysis(existingAnalysisFromQuery);
+          setCurrentAnalysis(existingAnalysisFromQuery);
           toast({
             title: "Existing Analysis Found",
             description: "Displaying previously completed analysis for this audio file.",
           });
         } else {
+          console.log(`No existing completed analysis found for audio file: ${audioIdFromUrl}`);
           setExistingAnalysis(null);
+          setCurrentAnalysis(null);
         }
       }
     }
-  }, [audioIdFromUrl, audioFiles, analyses]);
+  }, [audioIdFromUrl, audioFiles, existingAnalysisFromQuery]);
 
   // Start analysis mutation
   const startAnalysisMutation = useMutation<Analysis, Error, string>({
@@ -244,13 +268,17 @@ export default function SpeechAnalysis() {
       return;
     }
 
-    // Check if analysis already exists for this audio file
+    // Check if analysis already exists for this audio file using more reliable method
     const existingAnalysisForFile = analyses.find(analysis => 
       analysis.audioFileId === selectedAudioFile && analysis.status === 'completed'
-    );
+    ) || existingAnalysis;
+
+    console.log(`Starting analysis for audio file: ${selectedAudioFile}`);
+    console.log(`Existing completed analysis found:`, existingAnalysisForFile ? 'Yes' : 'No');
 
     if (existingAnalysisForFile) {
       // Use existing analysis - don't create new one
+      console.log(`Using existing analysis: ${existingAnalysisForFile.id}`);
       setCurrentAnalysis(existingAnalysisForFile);
       setExistingAnalysis(existingAnalysisForFile);
       setShowPDFPreview(false);
@@ -263,6 +291,7 @@ export default function SpeechAnalysis() {
     }
 
     // No existing analysis - create new one
+    console.log(`Creating new analysis for audio file: ${selectedAudioFile}`);
     setCurrentAnalysis(null);
     setExistingAnalysis(null);
     setShowPDFPreview(false);
