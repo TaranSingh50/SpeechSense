@@ -365,16 +365,22 @@ export default function AudioManagement() {
                           variant="ghost"
                           className="text-gray-600 hover:text-trustworthy-blue"
                           title="Analyze Audio"
-                          onClick={() => {
-                            console.log(`Navigating to analysis with audioId: ${file.id}`);
+                          onClick={(e) => {
+                            e.preventDefault();
+                            console.log(`Audio Management: Navigating to analysis with audioId: ${file.id}`);
+                            console.log("Current URL before navigation:", window.location.href);
                             const accessToken = localStorage.getItem("accessToken");
+                            console.log("Access token exists:", !!accessToken);
                             if (!accessToken) {
                               console.error("No access token found, user needs to login");
-                              window.location.href = "/login";
+                              setLocation("/login");
                               return;
                             }
                             console.log("Access token found, navigating to analysis");
-                            setLocation(`/analysis?audioId=${file.id}`);
+                            const targetUrl = `/analysis?audioId=${file.id}`;
+                            console.log("Target URL:", targetUrl);
+                            setLocation(targetUrl);
+                            console.log("Navigation called, new URL should be:", targetUrl);
                           }}
                         >
                           <TrendingUp size={16} />

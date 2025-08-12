@@ -352,16 +352,22 @@ export default function Home() {
                           <Button 
                             size="sm" 
                             variant="ghost"
-                            onClick={() => {
-                              console.log(`Dashboard navigating to analysis with audioId: ${file.id}`);
+                            onClick={(e) => {
+                              e.preventDefault();
+                              console.log(`Dashboard: Navigating to analysis with audioId: ${file.id}`);
+                              console.log("Current URL before navigation:", window.location.href);
                               const accessToken = localStorage.getItem("accessToken");
+                              console.log("Access token exists:", !!accessToken);
                               if (!accessToken) {
                                 console.error("No access token found, user needs to login");
                                 setLocation("/login");
                                 return;
                               }
                               console.log("Access token found, navigating to analysis");
-                              setLocation(`/analysis?audioId=${file.id}`);
+                              const targetUrl = `/analysis?audioId=${file.id}`;
+                              console.log("Target URL:", targetUrl);
+                              setLocation(targetUrl);
+                              console.log("Navigation called, new URL should be:", targetUrl);
                             }}
                           >
                             <TrendingUp size={14} />

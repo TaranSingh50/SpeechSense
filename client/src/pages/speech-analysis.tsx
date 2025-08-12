@@ -459,7 +459,13 @@ export default function SpeechAnalysis() {
                   <select 
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-medical-teal focus:border-transparent"
                     value={selectedAudioFile}
-                    onChange={(e) => setSelectedAudioFile(e.target.value)}
+                    onChange={(e) => {
+                      console.log("HTML Select dropdown changed to:", e.target.value);
+                      setSelectedAudioFile(e.target.value);
+                      // Reset analysis state when changing files
+                      setCurrentAnalysis(null);
+                      setExistingAnalysis(null);
+                    }}
                     data-testid="select-audio-file"
                   >
                     <option value="">Choose an audio file to analyze</option>
