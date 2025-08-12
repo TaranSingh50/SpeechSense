@@ -226,11 +226,16 @@ export default function PatientProfile() {
             <div className="flex items-center space-x-6">
               <Avatar className="w-24 h-24">
                 <AvatarImage 
-                  src={previewUrl || user.profileImageUrl || ""} 
-                  alt={`${user.firstName} ${user.lastName}`} 
+                  src={previewUrl || (user.profileImageUrl ? `${window.location.origin}${user.profileImageUrl}` : "")} 
+                  alt={`${user.firstName || ''} ${user.lastName || ''}`}
+                  onError={(e) => {
+                    console.log('Profile image failed to load:', user.profileImageUrl);
+                    e.currentTarget.style.display = 'none';
+                  }}
                 />
                 <AvatarFallback className="bg-medical-teal text-white text-xl">
-                  {user.firstName?.[0]?.toUpperCase()}{user.lastName?.[0]?.toUpperCase()}
+                  {user.firstName?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
+                  {user.lastName?.[0]?.toUpperCase() || ''}
                 </AvatarFallback>
               </Avatar>
               
@@ -244,31 +249,37 @@ export default function PatientProfile() {
                   </p>
                 </div>
                 
-                <div className="flex items-center space-x-3">
-                  <Input
-                    id="profile-upload"
-                    type="file"
-                    accept=".jpg,.jpeg,.png"
-                    onChange={handleFileSelect}
-                    className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-medical-teal file:text-white hover:file:bg-opacity-90"
-                  />
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3">
+                    <div className="relative">
+                      <Input
+                        id="profile-upload"
+                        type="file"
+                        accept=".jpg,.jpeg,.png"
+                        onChange={handleFileSelect}
+                        className="w-full cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-medical-teal file:text-white hover:file:bg-medical-teal/90 file:cursor-pointer"
+                      />
+                    </div>
+                    {selectedFile && (
+                      <Button 
+                        onClick={handleUploadPicture}
+                        disabled={uploadPictureMutation.isPending}
+                        className="bg-medical-teal hover:bg-medical-teal/90 whitespace-nowrap"
+                      >
+                        <Upload size={16} className="mr-2" />
+                        {uploadPictureMutation.isPending ? "Uploading..." : "Upload"}
+                      </Button>
+                    )}
+                  </div>
+                  
                   {selectedFile && (
-                    <Button 
-                      onClick={handleUploadPicture}
-                      disabled={uploadPictureMutation.isPending}
-                      className="bg-medical-teal hover:bg-opacity-90"
-                    >
-                      <Upload size={16} className="mr-2" />
-                      {uploadPictureMutation.isPending ? "Uploading..." : "Upload"}
-                    </Button>
+                    <div className="text-xs text-medical-teal bg-medical-teal/5 p-2 rounded border border-medical-teal/20">
+                      ✓ File selected: {selectedFile.name} - Click Upload to save
+                    </div>
                   )}
                 </div>
 
-                {previewUrl && (
-                  <div className="text-xs text-medical-teal">
-                    ✓ New picture selected - click Upload to save
-                  </div>
-                )}
+
               </div>
             </div>
           </CardContent>
@@ -329,8 +340,8 @@ export default function PatientProfile() {
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-charcoal-grey">Account Type</Label>
                   <div className="flex items-center space-x-2">
-                    <Badge variant="secondary" className="bg-medical-teal bg-opacity-10 text-medical-teal">
-                      {user.accountType === "patient" ? "Patient" : "Therapist"}
+                    <Badge variant="secondary" className="bg-medical-teal/10 text-medical-teal border-medical-teal/20 px-3 py-1 text-sm font-medium">
+                      {user.accountType === "patient" ? "Patient" : user.accountType === "therapist" ? "Therapist" : "User"}
                     </Badge>
                   </div>
                 </div>

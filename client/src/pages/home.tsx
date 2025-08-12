@@ -139,9 +139,12 @@ export default function Home() {
                 <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
                   {user.profileImageUrl ? (
                     <img 
-                      src={user.profileImageUrl} 
-                      alt={`${user.firstName} ${user.lastName}`}
+                      src={`${window.location.origin}${user.profileImageUrl}`} 
+                      alt={`${user.firstName || ''} ${user.lastName || ''}`}
                       className="w-10 h-10 rounded-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
                     />
                   ) : (
                     <div className="w-10 h-10 bg-medical-teal rounded-full flex items-center justify-center">
