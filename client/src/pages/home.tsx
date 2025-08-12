@@ -349,14 +349,16 @@ export default function Home() {
                           <Button size="sm" variant="ghost">
                             <Play size={14} />
                           </Button>
-                          <Link href={`/analysis?audioId=${file.id}`}>
-                            <Button 
-                              size="sm" 
-                              variant="ghost"
-                            >
-                              <TrendingUp size={14} />
-                            </Button>
-                          </Link>
+                          <Button 
+                            size="sm" 
+                            variant="ghost"
+                            onClick={() => {
+                              console.log(`Dashboard navigating to analysis with audioId: ${file.id}`);
+                              window.location.href = `/analysis?audioId=${file.id}`;
+                            }}
+                          >
+                            <TrendingUp size={14} />
+                          </Button>
                         </div>
                       </div>
                     ))}

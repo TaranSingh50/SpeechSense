@@ -1,0 +1,55 @@
+speech-analysis.tsx:77 Current location: /analysis
+speech-analysis.tsx:78 URL search part: 
+speech-analysis.tsx:79 Extracted audioId from URL: null
+speech-analysis.tsx:143 Auto-selection effect triggered
+speech-analysis.tsx:144 audioIdFromUrl: null
+speech-analysis.tsx:145 audioFiles.length: 1
+speech-analysis.tsx:146 currentSelectedAudioFile: 
+speech-analysis.tsx:77 Current location: /analysis
+speech-analysis.tsx:78 URL search part: 
+speech-analysis.tsx:79 Extracted audioId from URL: null
+audio-management.tsx:100 Audio Management polling - query data: [{…}]
+audio-management.tsx:101 Audio Management polling - audioFiles data: [{…}]
+audio-management.tsx:102 Audio Management polling - audioFiles length: 1
+audio-management.tsx:103 Audio Management user state: true
+audio-management.tsx:111 Audio Management polling check: {dataType: 'object', isArray: true, dataLength: 1, hasProcessing: false, statuses: Array(1)}
+audio-management.tsx:100 Audio Management polling - query data: [{…}]
+audio-management.tsx:101 Audio Management polling - audioFiles data: [{…}]
+audio-management.tsx:102 Audio Management polling - audioFiles length: 1
+audio-management.tsx:103 Audio Management user state: true
+audio-management.tsx:111 Audio Management polling check: {dataType: 'object', isArray: true, dataLength: 1, hasProcessing: false, statuses: Array(1)}
+audio-management.tsx:100 Audio Management polling - query data: [{…}]
+audio-management.tsx:101 Audio Management polling - audioFiles data: [{…}]
+audio-management.tsx:102 Audio Management polling - audioFiles length: 1
+audio-management.tsx:103 Audio Management user state: true
+audio-management.tsx:111 Audio Management polling check: {dataType: 'object', isArray: true, dataLength: 1, hasProcessing: false, statuses: Array(1)}
+audio-management.tsx:100 Audio Management polling - query data: [{…}]
+audio-management.tsx:101 Audio Management polling - audioFiles data: [{…}]
+audio-management.tsx:102 Audio Management polling - audioFiles length: 1
+audio-management.tsx:103 Audio Management user state: true
+audio-management.tsx:111 Audio Management polling check: {dataType: 'object', isArray: true, dataLength: 1, hasProcessing: false, statuses: Array(1)}
+audio-management.tsx:100 Audio Management polling - query data: [{…}]
+audio-management.tsx:101 Audio Management polling - audioFiles data: [{…}]
+audio-management.tsx:102 Audio Management polling - audioFiles length: 1
+audio-management.tsx:103 Audio Management user state: true
+audio-management.tsx:111 Audio Management polling check: {dataType: 'object', isArray: true, dataLength: 1, hasProcessing: false, statuses: Array(1)}
+audio-management.tsx:100 Audio Management polling - query data: [{…}]
+audio-management.tsx:101 Audio Management polling - audioFiles data: [{…}]
+audio-management.tsx:102 Audio Management polling - audioFiles length: 1
+audio-management.tsx:103 Audio Management user state: true
+audio-management.tsx:111 Audio Management polling check: {dataType: 'object', isArray: true, dataLength: 1, hasProcessing: false, statuses: Array(1)}
+audio-management.tsx:100 Audio Management polling - query data: [{…}]
+audio-management.tsx:101 Audio Management polling - audioFiles data: [{…}]
+audio-management.tsx:102 Audio Management polling - audioFiles length: 1
+audio-management.tsx:103 Audio Management user state: true
+audio-management.tsx:111 Audio Management polling check: {dataType: 'object', isArray: true, dataLength: 1, hasProcessing: false, statuses: Array(1)}
+speech-analysis.tsx:77 Current location: /analysis
+speech-analysis.tsx:78 URL search part: 
+speech-analysis.tsx:79 Extracted audioId from URL: null
+speech-analysis.tsx:143 Auto-selection effect triggered
+speech-analysis.tsx:144 audioIdFromUrl: null
+speech-analysis.tsx:145 audioFiles.length: 1
+speech-analysis.tsx:146 currentSelectedAudioFile: 
+speech-analysis.tsx:77 Current location: /analysis
+speech-analysis.tsx:78 URL search part: 
+speech-analysis.tsx:79 Extracted audioId from URL: null

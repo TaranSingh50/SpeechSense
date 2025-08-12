@@ -359,16 +359,18 @@ export default function AudioManagement() {
                         >
                           {playingAudioId === file.id ? <Pause size={16} /> : <Play size={16} />}
                         </Button>
-                        <Link href={`/analysis?audioId=${file.id}`}>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-gray-600 hover:text-trustworthy-blue"
-                            title="Analyze Audio"
-                          >
-                            <TrendingUp size={16} />
-                          </Button>
-                        </Link>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-gray-600 hover:text-trustworthy-blue"
+                          title="Analyze Audio"
+                          onClick={() => {
+                            console.log(`Navigating to analysis with audioId: ${file.id}`);
+                            window.location.href = `/analysis?audioId=${file.id}`;
+                          }}
+                        >
+                          <TrendingUp size={16} />
+                        </Button>
                         <Button
                           size="sm"
                           variant="ghost"
