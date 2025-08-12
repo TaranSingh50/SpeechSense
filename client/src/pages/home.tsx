@@ -139,7 +139,8 @@ export default function Home() {
                 <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
                   {user.profileImageUrl ? (
                     <img 
-                      src={`${window.location.origin}${user.profileImageUrl}?v=${Date.now()}`} 
+                      key={`dashboard-${user.profileImageUrl}-${user.updatedAt}`}
+                      src={`${window.location.origin}${user.profileImageUrl}?v=${user.updatedAt || Date.now()}`} 
                       alt={`${user.firstName || ''} ${user.lastName || ''}`}
                       className="w-10 h-10 rounded-full object-cover"
                       onError={(e) => {

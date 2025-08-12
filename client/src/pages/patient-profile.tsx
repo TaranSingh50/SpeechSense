@@ -83,16 +83,21 @@ export default function PatientProfile() {
         description: data.message,
       });
       
-      // Wait for user data to be refetched before clearing preview
+      // Update image key immediately to force re-render
+      setImageKey(prev => prev + 1);
+      
+      // Invalidate and refetch user data
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
       
-      // Clear the selected file and preview only after successful data update
+      // Keep preview URL until new image is confirmed loaded
+      // Clear the selected file but keep preview temporarily
       setSelectedFile(null);
-      setPreviewUrl(null);
       
-      // Force image to re-render with new key
-      setImageKey(prev => prev + 1);
+      // Clear preview after a short delay to allow new image to load
+      setTimeout(() => {
+        setPreviewUrl(null);
+      }, 1000);
       
       console.log('Profile picture upload complete - user data refreshed, image key updated');
     },
@@ -173,8 +178,12 @@ export default function PatientProfile() {
         return;
       }
 
+      const previewURL = URL.createObjectURL(file);
+      console.log('File selected:', { name: file.name, size: file.size, type: file.type });
+      console.log('Preview URL created:', previewURL);
+      
       setSelectedFile(file);
-      setPreviewUrl(URL.createObjectURL(file));
+      setPreviewUrl(previewURL);
     }
   };
 
@@ -239,17 +248,17 @@ export default function PatientProfile() {
             <div className="flex items-center space-x-6">
               <div className="relative">
                 <Avatar className="w-24 h-24">
-                  {(previewUrl || user.profileImageUrl) && (
+                  {(previewUrl || user.profileImageUrl) ? (
                     <img
-                      key={`${imageKey}-${user.profileImageUrl}`}
+                      key={`${imageKey}-${user.profileImageUrl || 'preview'}`}
                       src={
                         previewUrl || 
-                        `${window.location.origin}${user.profileImageUrl}?v=${Date.now()}`
+                        `${window.location.origin}${user.profileImageUrl}?v=${imageKey}-${Date.now()}`
                       }
                       alt={`${user.firstName || ''} ${user.lastName || ''}`}
                       className="w-full h-full object-cover rounded-full"
                       onLoad={() => {
-                        console.log('Profile image loaded successfully:', user.profileImageUrl);
+                        console.log('Profile image loaded successfully:', previewUrl ? 'Preview' : user.profileImageUrl);
                       }}
                       onError={(e) => {
                         console.log('Profile image failed to load, falling back to avatar:', {
@@ -261,11 +270,12 @@ export default function PatientProfile() {
                         e.currentTarget.style.display = 'none';
                       }}
                     />
+                  ) : (
+                    <AvatarFallback className="bg-medical-teal text-white text-xl">
+                      {user.firstName?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
+                      {user.lastName?.[0]?.toUpperCase() || ''}
+                    </AvatarFallback>
                   )}
-                  <AvatarFallback className="bg-medical-teal text-white text-xl">
-                    {user.firstName?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
-                    {user.lastName?.[0]?.toUpperCase() || ''}
-                  </AvatarFallback>
                 </Avatar>
               </div>
               
