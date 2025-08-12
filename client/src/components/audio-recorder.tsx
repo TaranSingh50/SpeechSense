@@ -200,6 +200,14 @@ export function AudioRecorder() {
       const fileName = `recording_${Date.now()}.wav`;
       formData.append('audio', audioBlob, fileName);
       formData.append('duration', recordingTime.toString());
+      
+      console.log(`Audio Recorder: Saving recording with duration: ${recordingTime} seconds`);
+      console.log(`Audio Recorder: Blob size: ${audioBlob.size} bytes`);
+      console.log(`Audio Recorder: FormData contents:`, {
+        audio: `${audioBlob.size} bytes blob`,
+        duration: recordingTime.toString()
+      });
+      
       uploadMutation.mutate(formData);
     }
   }, [audioBlob, recordingTime, uploadMutation]);
