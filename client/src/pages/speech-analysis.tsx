@@ -162,12 +162,13 @@ export default function SpeechAnalysis() {
       const audioFile = audioFiles.find(file => file.id === audioIdFromUrl);
       console.log("Found matching audio file:", audioFile);
       
-      if (audioFile && selectedAudioFile !== audioIdFromUrl) {
+      if (audioFile) {
+        // Always set the selected file to ensure dropdown reflects the selection
         console.log(`Auto-selecting audio file: ${audioFile.originalName} (ID: ${audioIdFromUrl})`);
         setSelectedAudioFile(audioIdFromUrl);
         
         // Handle existing analysis from dedicated query
-        if (existingAnalysisFromQuery) {
+        if (existingAnalysisFromQuery && existingAnalysisFromQuery.status === 'completed') {
           console.log(`Found existing completed analysis for audio file: ${audioIdFromUrl}`);
           setExistingAnalysis(existingAnalysisFromQuery);
           setCurrentAnalysis(existingAnalysisFromQuery);
@@ -180,15 +181,17 @@ export default function SpeechAnalysis() {
           setExistingAnalysis(null);
           setCurrentAnalysis(null);
         }
+      } else {
+        console.warn(`Audio file with ID ${audioIdFromUrl} not found in loaded files`);
       }
-    } else if (!audioIdFromUrl && selectedAudioFile) {
-      // Reset if no URL parameter
+    } else if (!audioIdFromUrl && selectedAudioFile && location.split('?')[0] === '/analysis') {
+      // Reset if no URL parameter but we're on analysis page
       console.log("No audioId in URL, resetting selection");
       setSelectedAudioFile('');
       setCurrentAnalysis(null);
       setExistingAnalysis(null);
     }
-  }, [audioIdFromUrl, audioFiles, existingAnalysisFromQuery, selectedAudioFile]);
+  }, [audioIdFromUrl, audioFiles, existingAnalysisFromQuery, location]);
 
   // Start analysis mutation
   const startAnalysisMutation = useMutation<Analysis, Error, string>({
@@ -449,6 +452,11 @@ export default function SpeechAnalysis() {
                       <span className="text-sm font-medium text-blue-800">
                         Auto-selected from {audioIdFromUrl.includes('audio_') ? 'Audio Library' : 'Dashboard'}
                       </span>
+                      {selectedAudioFile === audioIdFromUrl && (
+                        <Badge variant="outline" className="ml-auto bg-green-50 text-green-700">
+                          ✓ Applied
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 )}
@@ -457,18 +465,30 @@ export default function SpeechAnalysis() {
                     Select Audio File
                   </label>
                   <select 
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-medical-teal focus:border-transparent"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-medical-teal focus:border-transparent bg-white"
                     value={selectedAudioFile}
                     onChange={(e) => {
                       console.log("HTML Select dropdown changed to:", e.target.value);
-                      setSelectedAudioFile(e.target.value);
+                      const newValue = e.target.value;
+                      setSelectedAudioFile(newValue);
+                      
                       // Reset analysis state when changing files
                       setCurrentAnalysis(null);
                       setExistingAnalysis(null);
+                      
+                      // Update URL to reflect the selection (optional, for consistency)
+                      if (newValue) {
+                        setLocation(`/analysis?audioId=${newValue}`);
+                      } else {
+                        setLocation('/analysis');
+                      }
                     }}
                     data-testid="select-audio-file"
+                    disabled={audioFilesLoading}
                   >
-                    <option value="">Choose an audio file to analyze</option>
+                    <option value="" disabled>
+                      {audioFilesLoading ? "Loading audio files..." : "Choose an audio file to analyze"}
+                    </option>
                     {audioFiles.map((file) => (
                       <option key={file.id} value={file.id}>
                         {file.originalName} ({(file.fileSize / 1024 / 1024).toFixed(1)} MB)
@@ -478,6 +498,11 @@ export default function SpeechAnalysis() {
                       </option>
                     ))}
                   </select>
+                  {audioIdFromUrl && selectedAudioFile && (
+                    <p className="text-sm text-green-600 mt-2">
+                      ✓ Audio file auto-selected from navigation
+                    </p>
+                  )}
                 </div>
                 
                 {existingAnalysis && (
