@@ -7,7 +7,7 @@ import cookieParser from "cookie-parser";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { insertAudioFileSchema, insertSpeechAnalysisSchema, insertReportSchema } from "@shared/schema";
+import { insertAudioFileSchema, insertSpeechAnalysisSchema, insertReportSchema, updateProfileSchema, changePasswordSchema } from "@shared/schema";
 import { z } from "zod";
 import { generateAnalysisPDF } from "./utils/pdfGenerator";
 import { transcribeAudio } from "./utils/speechToText";
@@ -503,6 +503,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error sending email:", error);
       res.status(500).json({ message: "Failed to send email" });
+    }
+  });
+
+  // Profile management routes
+  const profileUpload = multer({
+    dest: "uploads/profiles",
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB limit for profile images
+    },
+    fileFilter: (req, file, cb) => {
+      const allowedMimes = ["image/jpeg", "image/png", "image/jpg"];
+      if (allowedMimes.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error("Invalid file type. Only JPG, JPEG, and PNG files are allowed."));
+      }
+    },
+  });
+
+  app.post('/api/profile/upload-picture', authenticateToken, profileUpload.single('profileImage'), async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      // In a real implementation, you'd upload to cloud storage (S3, Cloudinary, etc.)
+      // For now, we'll store the local path
+      const profileImageUrl = `/uploads/profiles/${req.file.filename}`;
+      
+      await storage.updateUserProfile(userId, { profileImageUrl });
+      
+      res.json({ 
+        success: true, 
+        profileImageUrl,
+        message: "Profile picture updated successfully" 
+      });
+    } catch (error) {
+      console.error("Error uploading profile picture:", error);
+      res.status(500).json({ message: "Failed to upload profile picture" });
+    }
+  });
+
+  app.put('/api/profile', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const validation = updateProfileSchema.safeParse(req.body);
+      
+      if (!validation.success) {
+        return res.status(400).json({ 
+          message: "Invalid profile data",
+          errors: validation.error.errors 
+        });
+      }
+
+      const updatedUser = await storage.updateUserProfile(userId, validation.data);
+      
+      res.json({
+        success: true,
+        user: updatedUser,
+        message: "Profile updated successfully"
+      });
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
+  app.post('/api/profile/change-password', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const validation = changePasswordSchema.safeParse(req.body);
+      
+      if (!validation.success) {
+        return res.status(400).json({ 
+          message: "Invalid password data",
+          errors: validation.error.errors 
+        });
+      }
+
+      const { currentPassword, newPassword } = validation.data;
+      
+      // Verify current password
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const bcrypt = require('bcrypt');
+      const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+      if (!isCurrentPasswordValid) {
+        return res.status(400).json({ message: "Current password is incorrect" });
+      }
+
+      // Hash new password and update
+      const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+      await storage.updateUserPassword(userId, hashedNewPassword);
+      
+      res.json({
+        success: true,
+        message: "Password changed successfully"
+      });
+    } catch (error) {
+      console.error("Error changing password:", error);
+      res.status(500).json({ message: "Failed to change password" });
+    }
+  });
+
+  // Serve uploaded profile images
+  app.get('/uploads/profiles/:filename', (req, res) => {
+    const filePath = path.join(process.cwd(), 'uploads', 'profiles', req.params.filename);
+    if (fs.existsSync(filePath)) {
+      res.sendFile(filePath);
+    } else {
+      res.status(404).json({ message: "Image not found" });
     }
   });
 

@@ -212,6 +212,22 @@ export const resetPasswordSchema = z.object({
   path: ["confirmPassword"],
 });
 
+// Profile update schemas
+export const updateProfileSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  profileImageUrl: z.string().optional(),
+});
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z.string().min(8, "New password must be at least 8 characters"),
+  confirmPassword: z.string().min(1, "Please confirm your new password"),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
 // Types
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -220,6 +236,8 @@ export type RegisterUser = z.infer<typeof registerSchema>;
 export type LoginUser = z.infer<typeof loginSchema>;
 export type ForgotPasswordUser = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordUser = z.infer<typeof resetPasswordSchema>;
+export type UpdateProfile = z.infer<typeof updateProfileSchema>;
+export type ChangePassword = z.infer<typeof changePasswordSchema>;
 
 export type AuthToken = typeof authTokens.$inferSelect;
 export type InsertAuthToken = z.infer<typeof insertAuthTokenSchema>;

@@ -135,27 +135,34 @@ export default function Home() {
 
           <nav className="mt-6">
             <div className="px-6 mb-6">
-              <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                {user.profileImageUrl ? (
-                  <img 
-                    src={user.profileImageUrl} 
-                    alt={`${user.firstName} ${user.lastName}`}
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="w-10 h-10 bg-medical-teal rounded-full flex items-center justify-center">
-                    <span className="text-white font-medium">
-                      {user.firstName?.[0] || user.email?.[0] || 'U'}
-                    </span>
+              <Link href="/patient-profile">
+                <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+                  {user.profileImageUrl ? (
+                    <img 
+                      src={user.profileImageUrl} 
+                      alt={`${user.firstName} ${user.lastName}`}
+                      className="w-10 h-10 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 bg-medical-teal rounded-full flex items-center justify-center">
+                      <span className="text-white font-medium">
+                        {user.firstName?.[0] || user.email?.[0] || 'U'}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <p className="font-medium text-professional-grey">
+                      {user.firstName ? `${user.firstName} ${user.lastName || ''}` : user.email}
+                    </p>
+                    <p className="text-sm text-gray-500 capitalize">{user.accountType || 'User'}</p>
                   </div>
-                )}
-                <div>
-                  <p className="font-medium text-professional-grey">
-                    {user.firstName ? `${user.firstName} ${user.lastName || ''}` : user.email}
-                  </p>
-                  <p className="text-sm text-gray-500 capitalize">{user.accountType || 'User'}</p>
+                  <div className="text-gray-400">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
                 </div>
-              </div>
+              </Link>
             </div>
 
             <ul className="space-y-2 px-4">

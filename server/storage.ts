@@ -25,6 +25,8 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User>;
+  updateUserProfile(id: string, updates: { firstName?: string; lastName?: string; profileImageUrl?: string }): Promise<User>;
+  updateUserPassword(id: string, hashedPassword: string): Promise<void>;
   upsertUser(userData: Partial<User> & { id: string; email: string }): Promise<User>;
   
   // Authentication token operations
@@ -82,6 +84,24 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id))
       .returning();
     return user;
+  }
+
+  async updateUserProfile(id: string, updates: { firstName?: string; lastName?: string; profileImageUrl?: string }): Promise<User> {
+    if (!db) throw new Error('Database not initialized');
+    const [user] = await db
+      .update(users)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  async updateUserPassword(id: string, hashedPassword: string): Promise<void> {
+    if (!db) throw new Error('Database not initialized');
+    await db
+      .update(users)
+      .set({ password: hashedPassword, updatedAt: new Date() })
+      .where(eq(users.id, id));
   }
 
   async upsertUser(userData: Partial<User> & { id: string; email: string }): Promise<User> {
@@ -286,6 +306,25 @@ export class MemStorage implements IStorage {
     this.users.set(id, updatedUser);
     this.usersByEmail.set(updatedUser.email, updatedUser);
     return updatedUser;
+  }
+
+  async updateUserProfile(id: string, updates: { firstName?: string; lastName?: string; profileImageUrl?: string }): Promise<User> {
+    const user = this.users.get(id);
+    if (!user) throw new Error("User not found");
+    
+    const updatedUser = { ...user, ...updates, updatedAt: new Date() };
+    this.users.set(id, updatedUser);
+    this.usersByEmail.set(updatedUser.email, updatedUser);
+    return updatedUser;
+  }
+
+  async updateUserPassword(id: string, hashedPassword: string): Promise<void> {
+    const user = this.users.get(id);
+    if (!user) throw new Error("User not found");
+    
+    const updatedUser = { ...user, password: hashedPassword, updatedAt: new Date() };
+    this.users.set(id, updatedUser);
+    this.usersByEmail.set(updatedUser.email, updatedUser);
   }
 
   async upsertUser(userData: Partial<User> & { id: string; email: string }): Promise<User> {

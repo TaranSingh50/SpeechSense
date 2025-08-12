@@ -10,6 +10,7 @@ import Home from "@/pages/home";
 import AudioManagement from "@/pages/audio-management";
 import SpeechAnalysis from "@/pages/speech-analysis";
 import Reports from "@/pages/reports";
+import PatientProfile from "@/pages/patient-profile";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -34,6 +35,11 @@ function Router() {
       <Route path="/reports">
         <ProtectedRoute>
           <Reports />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/patient-profile">
+        <ProtectedRoute>
+          <PatientProfile />
         </ProtectedRoute>
       </Route>
       <Route component={NotFound} />
