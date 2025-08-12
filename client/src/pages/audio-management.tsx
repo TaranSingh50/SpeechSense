@@ -379,8 +379,12 @@ export default function AudioManagement() {
                             console.log("Access token found, navigating to analysis");
                             const targetUrl = `/analysis?audioId=${file.id}`;
                             console.log("Target URL:", targetUrl);
+                            
+                            // Use window.history.pushState to ensure URL parameters are preserved
+                            window.history.pushState({}, '', targetUrl);
                             setLocation(targetUrl);
                             console.log("Navigation called, new URL should be:", targetUrl);
+                            console.log("Actual URL after navigation:", window.location.href);
                           }}
                         >
                           <TrendingUp size={16} />

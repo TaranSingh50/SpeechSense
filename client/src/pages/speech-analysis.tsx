@@ -82,7 +82,7 @@ export default function SpeechAnalysis() {
   console.log("Full location:", location);
   console.log("Location parts:", locationParts);
   console.log("Search part:", searchPart);
-  console.log("URLSearchParams entries:", [...urlParams.entries()]);
+  console.log("URLSearchParams entries:", Array.from(urlParams.entries()));
   console.log("Extracted audioId from URL:", audioIdFromUrl);
   console.log("===========================");
 

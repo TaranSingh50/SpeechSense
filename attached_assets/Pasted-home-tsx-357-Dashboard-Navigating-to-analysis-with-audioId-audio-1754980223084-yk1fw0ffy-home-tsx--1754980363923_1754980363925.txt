@@ -1,0 +1,103 @@
+home.tsx:357 Dashboard: Navigating to analysis with audioId: audio_1754980223084_yk1fw0ffy
+home.tsx:358 Current URL before navigation: https://7f1d0c3e-12dd-444e-a7a2-946cf984305e-00-1gyh28scm2py8.pike.replit.dev/
+home.tsx:360 Access token exists: true
+home.tsx:366 Access token found, navigating to analysis
+home.tsx:368 Target URL: /analysis?audioId=audio_1754980223084_yk1fw0ffy
+home.tsx:370 Navigation called, new URL should be: /analysis?audioId=audio_1754980223084_yk1fw0ffy
+speech-analysis.tsx:81 === URL EXTRACTION DEBUG ===
+speech-analysis.tsx:82 Full location: /analysis
+speech-analysis.tsx:83 Location parts: ['/analysis']
+speech-analysis.tsx:84 Search part: 
+speech-analysis.tsx:85 URLSearchParams entries: []
+speech-analysis.tsx:86 Extracted audioId from URL: null
+speech-analysis.tsx:87 ===========================
+speech-analysis.tsx:164 === AUTO-SELECTION EFFECT DEBUG ===
+speech-analysis.tsx:165 Effect triggered with dependencies:
+speech-analysis.tsx:166 - audioIdFromUrl: null
+speech-analysis.tsx:167 - audioFiles.length: 1
+speech-analysis.tsx:168 - audioFiles IDs: ['audio_1754980223084_yk1fw0ffy']
+speech-analysis.tsx:169 - currentSelectedAudioFile: 
+speech-analysis.tsx:170 - location: /analysis
+speech-analysis.tsx:171 - audioFilesLoading: false
+speech-analysis.tsx:201 Auto-selection conditions not met:
+speech-analysis.tsx:202 - Has audioIdFromUrl: false
+speech-analysis.tsx:203 - Has audioFiles: true
+speech-analysis.tsx:204 - Not loading: true
+speech-analysis.tsx:213 === END AUTO-SELECTION DEBUG ===
+speech-analysis.tsx:81 === URL EXTRACTION DEBUG ===
+speech-analysis.tsx:82 Full location: /analysis
+speech-analysis.tsx:83 Location parts: ['/analysis']
+speech-analysis.tsx:84 Search part: 
+speech-analysis.tsx:85 URLSearchParams entries: []
+speech-analysis.tsx:86 Extracted audioId from URL: null
+speech-analysis.tsx:87 ===========================
+speech-analysis.tsx:99 Error loading audio files: Error: Missing queryFn: '["/api/audio"]'
+    at @tanstack_react-query.js?v=7ca24594:255:33
+    at Object.fetchFn [as fn] (@tanstack_react-query.js?v=7ca24594:840:14)
+    at run (@tanstack_react-query.js?v=7ca24594:494:49)
+    at @tanstack_react-query.js?v=7ca24594:519:11 Error Component Stack
+    at SpeechAnalysis (speech-analysis.tsx:61:20)
+    at ProtectedRoute (protected-route.tsx:5:34)
+    at Route (wouter.js?v=7ca24594:323:16)
+    at Switch (wouter.js?v=7ca24594:379:17)
+    at Router (<anonymous>)
+    at Provider (chunk-UBQ2LXDH.js?v=7ca24594:22:15)
+    at TooltipProvider (@radix-ui_react-tooltip.js?v=7ca24594:59:5)
+    at AuthProvider (use-auth.tsx:45:32)
+    at QueryClientProvider (@tanstack_react-query.js?v=7ca24594:2805:3)
+    at App (<anonymous>)
+overrideMethod @ hook.js:608
+(anonymous) @ speech-analysis.tsx:99
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=7ca24594:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=7ca24594:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=7ca24594:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=7ca24594:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=7ca24594:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=7ca24594:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=7ca24594:19447
+commitRootImpl @ chunk-RPCDYKBN.js?v=7ca24594:19416
+commitRoot @ chunk-RPCDYKBN.js?v=7ca24594:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=7ca24594:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=7ca24594:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=7ca24594:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=7ca24594:555
+flush @ @tanstack_react-query.js?v=7ca24594:569
+batch @ @tanstack_react-query.js?v=7ca24594:587
+dispatch_fn @ @tanstack_react-query.js?v=7ca24594:996
+onError @ @tanstack_react-query.js?v=7ca24594:861
+reject @ @tanstack_react-query.js?v=7ca24594:465
+(anonymous) @ @tanstack_react-query.js?v=7ca24594:508
+Promise.catch
+run @ @tanstack_react-query.js?v=7ca24594:498
+(anonymous) @ @tanstack_react-query.js?v=7ca24594:519
+Promise.then
+(anonymous) @ @tanstack_react-query.js?v=7ca24594:515
+Promise.catch
+run @ @tanstack_react-query.js?v=7ca24594:498
+start @ @tanstack_react-query.js?v=7ca24594:536
+fetch @ @tanstack_react-query.js?v=7ca24594:926
+executeFetch_fn @ @tanstack_react-query.js?v=7ca24594:2211
+onSubscribe @ @tanstack_react-query.js?v=7ca24594:1898
+subscribe @ @tanstack_react-query.js?v=7ca24594:24
+(anonymous) @ @tanstack_react-query.js?v=7ca24594:3022
+subscribeToStore @ chunk-RPCDYKBN.js?v=7ca24594:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=7ca24594:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=7ca24594:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=7ca24594:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=7ca24594:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=7ca24594:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=7ca24594:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=7ca24594:19447
+commitRootImpl @ chunk-RPCDYKBN.js?v=7ca24594:19416
+commitRoot @ chunk-RPCDYKBN.js?v=7ca24594:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=7ca24594:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=7ca24594:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=7ca24594:18627
+speech-analysis.tsx:81 === URL EXTRACTION DEBUG ===
+speech-analysis.tsx:82 Full location: /analysis
+speech-analysis.tsx:83 Location parts: ['/analysis']
+speech-analysis.tsx:84 Search part: 
+speech-analysis.tsx:85 URLSearchParams entries: []
+speech-analysis.tsx:86 Extracted audioId from URL: null
+speech-analysis.tsx:87 ===========================
