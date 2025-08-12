@@ -140,9 +140,16 @@ export default function SpeechAnalysis() {
 
   // Auto-select audio file from URL and handle existing analysis
   useEffect(() => {
+    console.log("Auto-selection effect triggered");
+    console.log("audioIdFromUrl:", audioIdFromUrl);
+    console.log("audioFiles.length:", audioFiles.length);
+    console.log("currentSelectedAudioFile:", selectedAudioFile);
+    
     if (audioIdFromUrl && audioFiles.length > 0) {
       const audioFile = audioFiles.find(file => file.id === audioIdFromUrl);
-      if (audioFile) {
+      console.log("Found matching audio file:", audioFile);
+      
+      if (audioFile && selectedAudioFile !== audioIdFromUrl) {
         console.log(`Auto-selecting audio file: ${audioFile.originalName} (ID: ${audioIdFromUrl})`);
         setSelectedAudioFile(audioIdFromUrl);
         
@@ -161,8 +168,14 @@ export default function SpeechAnalysis() {
           setCurrentAnalysis(null);
         }
       }
+    } else if (!audioIdFromUrl && selectedAudioFile) {
+      // Reset if no URL parameter
+      console.log("No audioId in URL, resetting selection");
+      setSelectedAudioFile('');
+      setCurrentAnalysis(null);
+      setExistingAnalysis(null);
     }
-  }, [audioIdFromUrl, audioFiles, existingAnalysisFromQuery]);
+  }, [audioIdFromUrl, audioFiles, existingAnalysisFromQuery, selectedAudioFile]);
 
   // Start analysis mutation
   const startAnalysisMutation = useMutation<Analysis, Error, string>({

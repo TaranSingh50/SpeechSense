@@ -349,13 +349,14 @@ export default function Home() {
                           <Button size="sm" variant="ghost">
                             <Play size={14} />
                           </Button>
-                          <Button 
-                            size="sm" 
-                            variant="ghost"
-                            onClick={() => setLocation(`/analysis?audioId=${file.id}`)}
-                          >
-                            <TrendingUp size={14} />
-                          </Button>
+                          <Link href={`/analysis?audioId=${file.id}`}>
+                            <Button 
+                              size="sm" 
+                              variant="ghost"
+                            >
+                              <TrendingUp size={14} />
+                            </Button>
+                          </Link>
                         </div>
                       </div>
                     ))}
