@@ -49,7 +49,7 @@ export const formatDuration = (seconds: number): string => {
 // Utility function to detect if file is recorded or uploaded
 export const isRecorded = (filename: string): boolean => filename.startsWith("recording_");
 
-// Utility function to load audio durations for multiple files
+// Utility function to load audio durations for multiple files with enhanced error handling
 export const loadAudioDurations = async (
   files: any[], 
   existingDurations: Record<string, number>,
@@ -60,19 +60,40 @@ export const loadAudioDurations = async (
   for (const file of files) {
     if (!existingDurations[file.id]) {
       try {
+        console.log(`Loading duration for ${file.originalName} (${file.id})`);
+        
         const response = await fetch(`/api/audio/${file.id}/stream`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
         
+        console.log(`Stream response for ${file.originalName}: ${response.status} ${response.statusText}`);
+        
         if (response.ok) {
           const blob = await response.blob();
+          console.log(`Blob size for ${file.originalName}: ${blob.size} bytes, type: ${blob.type}`);
+          
           const url = URL.createObjectURL(blob);
-          const duration = await getAudioDuration(url);
-          newDurations[file.id] = duration;
-          URL.revokeObjectURL(url);
+          
+          try {
+            const duration = await getAudioDuration(url);
+            console.log(`Duration loaded for ${file.originalName}: ${duration} seconds`);
+            newDurations[file.id] = duration;
+          } catch (durationError) {
+            console.error(`Failed to get duration for ${file.originalName}:`, durationError);
+            // Set a fallback value to prevent infinite "Loading..." state
+            newDurations[file.id] = -1; // Will display as "NA" due to formatDuration logic
+          } finally {
+            URL.revokeObjectURL(url);
+          }
+        } else {
+          console.error(`Failed to stream ${file.originalName}: ${response.status} ${response.statusText}`);
+          // Set fallback value for failed requests
+          newDurations[file.id] = -1;
         }
       } catch (error) {
-        console.log(`Failed to load duration for ${file.originalName}:`, error);
+        console.error(`Error loading duration for ${file.originalName}:`, error);
+        // Set fallback value for any other errors
+        newDurations[file.id] = -1;
       }
     }
   }

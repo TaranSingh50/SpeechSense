@@ -185,20 +185,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const audioFile = await storage.getAudioFile(req.params.id);
       
       if (!audioFile || audioFile.userId !== userId) {
+        console.log(`Audio file not found or unauthorized: ${req.params.id} for user ${userId}`);
         return res.status(404).json({ message: "Audio file not found" });
       }
 
       // Check if file exists
       if (!fs.existsSync(audioFile.filePath)) {
+        console.log(`Audio file not found on disk: ${audioFile.filePath}`);
         return res.status(404).json({ message: "Audio file not found on disk" });
       }
 
+      console.log(`Streaming audio file: ${audioFile.originalName} (${audioFile.filePath}) - MIME: ${audioFile.mimeType}`);
+      
       // Set appropriate headers for audio streaming
       res.setHeader('Content-Type', audioFile.mimeType);
       res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Content-Disposition', 'inline');
+      
+      // Get file stats for Content-Length
+      const stats = fs.statSync(audioFile.filePath);
+      res.setHeader('Content-Length', stats.size);
       
       // Stream the file
       const fileStream = fs.createReadStream(audioFile.filePath);
+      fileStream.on('error', (err) => {
+        console.error(`Error streaming file ${audioFile.filePath}:`, err);
+      });
       fileStream.pipe(res);
       
     } catch (error) {
