@@ -74,14 +74,20 @@ export default function PatientProfile() {
       const response = await apiRequest("POST", "/api/profile/upload-picture", formData);
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       toast({
         title: "Success",
         description: data.message,
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      
+      // Clear the selected file and preview immediately
       setSelectedFile(null);
       setPreviewUrl(null);
+      
+      // Force refetch user data to get updated profile image URL
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      
+      console.log('Profile picture upload successful:', data);
     },
     onError: (error: any) => {
       toast({
@@ -226,11 +232,17 @@ export default function PatientProfile() {
             <div className="flex items-center space-x-6">
               <Avatar className="w-24 h-24">
                 <AvatarImage 
-                  src={previewUrl || (user.profileImageUrl ? `${window.location.origin}${user.profileImageUrl}` : "")} 
+                  src={previewUrl || (user.profileImageUrl ? `${window.location.origin}${user.profileImageUrl}?t=${Date.now()}` : "")} 
                   alt={`${user.firstName || ''} ${user.lastName || ''}`}
+                  onLoad={() => {
+                    console.log('Profile image loaded successfully');
+                  }}
                   onError={(e) => {
-                    console.log('Profile image failed to load:', user.profileImageUrl);
-                    e.currentTarget.style.display = 'none';
+                    console.log('Profile image failed to load:', {
+                      url: user.profileImageUrl,
+                      fullUrl: user.profileImageUrl ? `${window.location.origin}${user.profileImageUrl}` : '',
+                      previewUrl
+                    });
                   }}
                 />
                 <AvatarFallback className="bg-medical-teal text-white text-xl">
@@ -250,31 +262,41 @@ export default function PatientProfile() {
                 </div>
                 
                 <div className="space-y-3">
-                  <div className="flex items-center space-x-3">
-                    <div className="relative">
-                      <Input
-                        id="profile-upload"
-                        type="file"
-                        accept=".jpg,.jpeg,.png"
-                        onChange={handleFileSelect}
-                        className="w-full cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-medical-teal file:text-white hover:file:bg-medical-teal/90 file:cursor-pointer"
-                      />
-                    </div>
-                    {selectedFile && (
-                      <Button 
-                        onClick={handleUploadPicture}
-                        disabled={uploadPictureMutation.isPending}
-                        className="bg-medical-teal hover:bg-medical-teal/90 whitespace-nowrap"
-                      >
-                        <Upload size={16} className="mr-2" />
-                        {uploadPictureMutation.isPending ? "Uploading..." : "Upload"}
-                      </Button>
-                    )}
+                  <div className="relative">
+                    <label 
+                      htmlFor="profile-upload"
+                      className="inline-flex items-center px-4 py-2 border-2 border-dashed border-medical-teal/30 rounded-lg cursor-pointer hover:border-medical-teal/50 hover:bg-medical-teal/5 transition-colors"
+                    >
+                      <Upload size={16} className="mr-2 text-medical-teal" />
+                      <span className="text-sm font-medium text-charcoal-grey">
+                        {selectedFile ? selectedFile.name : "Choose Profile Picture"}
+                      </span>
+                    </label>
+                    <input
+                      id="profile-upload"
+                      type="file"
+                      accept=".jpg,.jpeg,.png"
+                      onChange={handleFileSelect}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
                   </div>
                   
                   {selectedFile && (
-                    <div className="text-xs text-medical-teal bg-medical-teal/5 p-2 rounded border border-medical-teal/20">
-                      ✓ File selected: {selectedFile.name} - Click Upload to save
+                    <div className="flex items-center justify-between bg-medical-teal/5 p-3 rounded-lg border border-medical-teal/20">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-2 h-2 bg-medical-teal rounded-full"></div>
+                        <span className="text-xs text-medical-teal font-medium">
+                          File selected: {selectedFile.name}
+                        </span>
+                      </div>
+                      <Button 
+                        onClick={handleUploadPicture}
+                        disabled={uploadPictureMutation.isPending}
+                        size="sm"
+                        className="bg-medical-teal hover:bg-medical-teal/90 text-white"
+                      >
+                        {uploadPictureMutation.isPending ? "Uploading..." : "Upload"}
+                      </Button>
                     </div>
                   )}
                 </div>
