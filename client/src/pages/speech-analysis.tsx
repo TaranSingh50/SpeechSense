@@ -71,12 +71,20 @@ export default function SpeechAnalysis() {
 
   const [analysisTimeout, setAnalysisTimeout] = useState<NodeJS.Timeout | null>(null);
 
-  // Extract audioId from URL parameters with better debugging
-  const urlParams = new URLSearchParams(location.split('?')[1] || '');
+  // Extract audioId from URL parameters with enhanced debugging
+  const locationParts = location.split('?');
+  const searchPart = locationParts[1] || '';
+  const urlParams = new URLSearchParams(searchPart);
   const audioIdFromUrl = urlParams.get('audioId');
-  console.log("Current location:", location);
-  console.log("URL search part:", location.split('?')[1] || '');
+  
+  // Enhanced debugging for URL extraction
+  console.log("=== URL EXTRACTION DEBUG ===");
+  console.log("Full location:", location);
+  console.log("Location parts:", locationParts);
+  console.log("Search part:", searchPart);
+  console.log("URLSearchParams entries:", [...urlParams.entries()]);
   console.log("Extracted audioId from URL:", audioIdFromUrl);
+  console.log("===========================");
 
   // Fetch audio files
   const { data: audioFiles = [], isLoading: audioFilesLoading, error: audioFilesError } = useQuery<AudioFile[]>({
@@ -153,18 +161,22 @@ export default function SpeechAnalysis() {
 
   // Auto-select audio file from URL and handle existing analysis
   useEffect(() => {
-    console.log("Auto-selection effect triggered");
-    console.log("audioIdFromUrl:", audioIdFromUrl);
-    console.log("audioFiles.length:", audioFiles.length);
-    console.log("currentSelectedAudioFile:", selectedAudioFile);
+    console.log("=== AUTO-SELECTION EFFECT DEBUG ===");
+    console.log("Effect triggered with dependencies:");
+    console.log("- audioIdFromUrl:", audioIdFromUrl);
+    console.log("- audioFiles.length:", audioFiles.length);
+    console.log("- audioFiles IDs:", audioFiles.map(f => f.id));
+    console.log("- currentSelectedAudioFile:", selectedAudioFile);
+    console.log("- location:", location);
+    console.log("- audioFilesLoading:", audioFilesLoading);
     
-    if (audioIdFromUrl && audioFiles.length > 0) {
+    if (audioIdFromUrl && audioFiles.length > 0 && !audioFilesLoading) {
       const audioFile = audioFiles.find(file => file.id === audioIdFromUrl);
+      console.log("Searching for audio file with ID:", audioIdFromUrl);
       console.log("Found matching audio file:", audioFile);
       
       if (audioFile) {
-        // Always set the selected file to ensure dropdown reflects the selection
-        console.log(`Auto-selecting audio file: ${audioFile.originalName} (ID: ${audioIdFromUrl})`);
+        console.log(`✅ Auto-selecting audio file: ${audioFile.originalName} (ID: ${audioIdFromUrl})`);
         setSelectedAudioFile(audioIdFromUrl);
         
         // Handle existing analysis from dedicated query
@@ -182,16 +194,24 @@ export default function SpeechAnalysis() {
           setCurrentAnalysis(null);
         }
       } else {
-        console.warn(`Audio file with ID ${audioIdFromUrl} not found in loaded files`);
+        console.warn(`❌ Audio file with ID ${audioIdFromUrl} not found in loaded files`);
+        console.log("Available file IDs:", audioFiles.map(f => `${f.id} (${f.originalName})`));
       }
-    } else if (!audioIdFromUrl && selectedAudioFile && location.split('?')[0] === '/analysis') {
-      // Reset if no URL parameter but we're on analysis page
-      console.log("No audioId in URL, resetting selection");
-      setSelectedAudioFile('');
-      setCurrentAnalysis(null);
-      setExistingAnalysis(null);
+    } else {
+      console.log("Auto-selection conditions not met:");
+      console.log(`- Has audioIdFromUrl: ${!!audioIdFromUrl}`);
+      console.log(`- Has audioFiles: ${audioFiles.length > 0}`);
+      console.log(`- Not loading: ${!audioFilesLoading}`);
+      
+      if (!audioIdFromUrl && selectedAudioFile && location.split('?')[0] === '/analysis') {
+        console.log("No audioId in URL, resetting selection");
+        setSelectedAudioFile('');
+        setCurrentAnalysis(null);
+        setExistingAnalysis(null);
+      }
     }
-  }, [audioIdFromUrl, audioFiles, existingAnalysisFromQuery, location]);
+    console.log("=== END AUTO-SELECTION DEBUG ===");
+  }, [audioIdFromUrl, audioFiles, existingAnalysisFromQuery, location, audioFilesLoading]);
 
   // Start analysis mutation
   const startAnalysisMutation = useMutation<Analysis, Error, string>({
