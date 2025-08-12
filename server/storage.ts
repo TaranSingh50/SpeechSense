@@ -47,7 +47,7 @@ export interface IStorage {
   getUserAnalyses(userId: string): Promise<SpeechAnalysis[]>;
   
   // Report operations
-  createReport(report: InsertReport): Promise<Report>;
+  createReport(report: InsertReport & { userId: string }): Promise<Report>;
   getReport(id: string): Promise<Report | undefined>;
   getUserReports(userId: string): Promise<Report[]>;
   updateReport(id: string, updates: Partial<Report>): Promise<Report>;
@@ -204,7 +204,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Report operations
-  async createReport(report: InsertReport): Promise<Report> {
+  async createReport(report: InsertReport & { userId: string }): Promise<Report> {
     if (!db) throw new Error('Database not initialized');
     const [result] = await db.insert(reports).values(report).returning();
     return result;
@@ -416,11 +416,11 @@ export class MemStorage implements IStorage {
   }
 
   // Report operations
-  async createReport(reportData: InsertReport): Promise<Report> {
+  async createReport(reportData: InsertReport & { userId: string }): Promise<Report> {
     const id = `report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const report: Report = {
       id,
-      userId: '',
+      userId: reportData.userId,
       analysisId: reportData.analysisId,
       patientId: reportData.patientId || null,
       title: reportData.title,

@@ -319,6 +319,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const report = await storage.createReport({
         ...reportData,
+        userId,
       });
 
       res.json(report);
