@@ -98,6 +98,10 @@ export class AuthService {
     // Find user by email
     const user = await storage.getUserByEmail(credentials.email);
     if (!user) {
+      // In development with in-memory storage, provide more helpful error message
+      if (process.env.NODE_ENV === 'development' && !process.env.DATABASE_URL) {
+        throw new Error("User not found. In-memory storage was reset after server restart - please register again.");
+      }
       throw new Error("Invalid email or password");
     }
 
