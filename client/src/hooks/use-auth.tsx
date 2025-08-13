@@ -111,7 +111,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (data: LoginResponse) => {
       localStorage.setItem("accessToken", data.accessToken);
-      queryClient.setQueryData(["/api/auth/user"], data.user);
+      // Invalidate user query to fetch fresh data instead of setting potentially stale data
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       toast({
         title: "Login successful",
         description: `Welcome back, ${data.user.firstName || data.user.email}!`,
@@ -133,7 +134,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (data: RegisterResponse) => {
       localStorage.setItem("accessToken", data.accessToken);
-      queryClient.setQueryData(["/api/auth/user"], data.user);
+      // Invalidate user query to fetch fresh data instead of setting potentially stale data
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       toast({
         title: "Registration successful",
         description: `Welcome to SpeechPath, ${data.user.firstName || data.user.email}!`,

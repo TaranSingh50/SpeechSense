@@ -77,6 +77,8 @@ router.post("/login", async (req, res) => {
         lastName: result.user.lastName,
         accountType: result.user.accountType,
         isEmailVerified: result.user.isEmailVerified,
+        profileImageUrl: result.user.profileImageUrl,
+        updatedAt: result.user.updatedAt,
       },
       accessToken: result.accessToken,
     });
