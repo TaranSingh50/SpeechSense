@@ -1,0 +1,110 @@
+from fastapi import FastAPI, UploadFile, File, Form
+import numpy as np
+import librosa
+import os
+from keras.saving import load_model
+import uvicorn
+import nest_asyncio
+from pyngrok import ngrok # Corrected import
+import csv
+from fpdf import FPDF
+
+MODEL_PATH = "/content/best_model.keras"
+SAMPLE_RATE = 16000
+
+OUTPUT_DIR = "/content/outputs"
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+print("Loading model...")
+model = load_model(MODEL_PATH)
+print("Model loaded successfully.")
+
+app = FastAPI(title="Stuttering Inference API")
+
+def preprocess_audio(file_path, sr=16000, n_mfcc=13, hop_length=512):
+    y, _ = librosa.load(file_path, sr=sr, mono=True)
+    mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=n_mfcc, hop_length=hop_length)
+    return mfcc.T.astype(np.float32)
+
+def predict_stutter(file_path):
+    features = preprocess_audio(file_path)
+    features = np.expand_dims(features, axis=0)
+    predictions = model.predict(features)[0]
+    overall_prob = np.mean(predictions)
+    return overall_prob, predictions
+
+# @app.post("/predict/")
+# async def predict(patient_id: str = Form(...), file: UploadFile = File(...)):
+#     file_path = f"/content/{file.filename}"
+#     with open(file_path, "wb") as f:
+#         f.write(await file.read())
+
+#     overall_prob, _ = predict_stutter(file_path)
+#     result = {
+#         "patient_id": patient_id,
+#         "file": file.filename,
+#         "overall_stutter_probability": float(overall_prob),
+#         "overall_prediction": "Stutter" if overall_prob >= 0.5 else "No Stutter"
+#     }
+#     return result
+@app.post("/predict/")
+async def predict(patient_id: str = Form(...), file: UploadFile = File(...)):
+    # ✅ Save uploaded audio file
+    file_path = os.path.join(OUTPUT_DIR, file.filename)
+    with open(file_path, "wb") as f:
+        f.write(await file.read())
+
+    # ✅ Run your model
+    overall_prob, _ = predict_stutter(file_path)
+
+    prediction = "Stutter" if overall_prob >= 0.5 else "No Stutter"
+    result = {
+        "patient_id": patient_id,
+        "file": file.filename,
+        "overall_stutter_probability": float(overall_prob),
+        "overall_prediction": prediction
+    }
+
+    # ✅ Save results into CSV
+    csv_path = os.path.join(OUTPUT_DIR, f"{patient_id}_results.csv")
+    with open(csv_path, "w", newline="") as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(["patient_id", "file", "probability", "prediction"])
+        writer.writerow([patient_id, file.filename, float(overall_prob), prediction])
+
+    # ✅ Save results into PDF
+    pdf_path = os.path.join(OUTPUT_DIR, f"{patient_id}.pdf")
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    pdf.cell(200, 10, txt="Stuttering Report", ln=True, align="C")
+    pdf.ln(10)  # add spacing
+    for k, v in result.items():
+        pdf.cell(200, 10, txt=f"{k}: {v}", ln=True)
+    pdf.output(pdf_path)
+
+    # ✅ Return JSON with download links
+    return {
+        "message": "Prediction completed",
+        "patient_id": patient_id,
+        "csv_download": f"/download/{patient_id}_results.csv",
+        "pdf_download": f"/download/{patient_id}_report.pdf"
+    }
+
+# 🔹 File download route
+@app.get("/download/{filename}")
+async def download_file(filename: str):
+    file_path = os.path.join(OUTPUT_DIR, filename)
+    if os.path.exists(file_path):
+        return FileResponse(path=file_path, filename=filename)
+    return {"error": "File not found"}
+
+# Allow nested event loops (needed for Colab/Jupyter)
+nest_asyncio.apply()
+
+# Step 4: Expose with ngrok
+public_url = ngrok.connect(8000)
+print("Public URL:", public_url)
+
+# Step 5: Run uvicorn programmatically (not via ! command)
+uvicorn.run(app, host="0.0.0.0", port=8000)
