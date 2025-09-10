@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { authenticateToken } from "./middleware/auth";
@@ -701,7 +702,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Starting Python model prediction for patient: ${patient_id}`);
       
       // Import Python API helper
-      const { run_python_analysis } = await import('./python_api.js');
+      const { run_python_analysis } = await import('./python_api');
       
       // Run Python model inference
       const analysisResult = await run_python_analysis(req.file.path, patient_id);

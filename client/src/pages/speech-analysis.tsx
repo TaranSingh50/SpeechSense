@@ -410,6 +410,82 @@ export default function SpeechAnalysis() {
     }
   };
 
+  const handleDownloadCSVReport = async () => {
+    try {
+      if (!selectedAudio) {
+        toast({
+          title: "No Audio Selected",
+          description: "Please select an audio file first.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const patient_id = selectedAudio.id; // Using audio file ID as patient ID
+      const response = await apiRequest("GET", `/api/speech/download/csv/${patient_id}`);
+      const blob = await response.blob();
+      
+      // Create blob URL and download
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${patient_id}_results.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast({
+        title: "CSV Downloaded",
+        description: "Your CSV report has been downloaded successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Download Failed",
+        description: "CSV report not available. Please run AI analysis first.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDownloadPDFReport = async () => {
+    try {
+      if (!selectedAudio) {
+        toast({
+          title: "No Audio Selected",
+          description: "Please select an audio file first.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const patient_id = selectedAudio.id; // Using audio file ID as patient ID
+      const response = await apiRequest("GET", `/api/speech/download/pdf/${patient_id}`);
+      const blob = await response.blob();
+      
+      // Create blob URL and download
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${patient_id}_report.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast({
+        title: "AI Report Downloaded",
+        description: "Your AI-generated PDF report has been downloaded successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Download Failed",
+        description: "AI report not available. Please run AI analysis first.",
+        variant: "destructive",
+      });
+    }
+  };
+
 
 
 
@@ -756,6 +832,26 @@ export default function SpeechAnalysis() {
                         Download PDF
                       </Button>
                       
+                      {/* Python Model Report Downloads */}
+                      <Button
+                        onClick={() => handleDownloadCSVReport()}
+                        variant="outline"
+                        className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                        data-testid="button-download-csv"
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Download CSV Report
+                      </Button>
+                      
+                      <Button
+                        onClick={() => handleDownloadPDFReport()}
+                        variant="outline"
+                        className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                        data-testid="button-download-pdf-report"
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Download AI Report (PDF)
+                      </Button>
 
                     </div>
 

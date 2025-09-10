@@ -40,9 +40,9 @@ except Exception as e:
             temp_script_path = f.name
         
         try:
-            # Run the Python script
+            # Run the Python script using the UV environment
             result = subprocess.run(
-                ['python', temp_script_path],
+                ['.pythonlibs/bin/python', temp_script_path],
                 capture_output=True,
                 text=True,
                 timeout=60  # 60 second timeout
