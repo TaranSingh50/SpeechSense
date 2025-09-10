@@ -684,6 +684,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Python Model Prediction Routes
+  app.post('/api/speech/predict', authenticateToken, upload.single('audio'), async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { patient_id } = req.body;
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No audio file provided" });
+      }
+
+      if (!patient_id) {
+        return res.status(400).json({ message: "Patient ID is required" });
+      }
+
+      console.log(`Starting Python model prediction for patient: ${patient_id}`);
+      
+      // Import Python API helper
+      const { run_python_analysis } = await import('./python_api.js');
+      
+      // Run Python model inference
+      const analysisResult = await run_python_analysis(req.file.path, patient_id);
+      
+      if (analysisResult.success) {
+        res.json({
+          message: "Prediction completed successfully",
+          patient_id: patient_id,
+          results: analysisResult.results,
+          csv_download: `/api/speech/download/csv/${patient_id}`,
+          pdf_download: `/api/speech/download/pdf/${patient_id}`
+        });
+      } else {
+        console.error("Python analysis failed:", analysisResult.error);
+        res.status(500).json({ 
+          message: "Model prediction failed",
+          error: analysisResult.error 
+        });
+      }
+      
+    } catch (error) {
+      console.error("Error in Python prediction:", error);
+      res.status(500).json({ message: "Failed to run model prediction" });
+    }
+  });
+
+  // File download routes
+  app.get('/api/speech/download/csv/:patient_id', authenticateToken, (req, res) => {
+    try {
+      const { patient_id } = req.params;
+      const csvPath = path.join(process.cwd(), 'uploads', 'reports', `${patient_id}_results.csv`);
+      
+      if (fs.existsSync(csvPath)) {
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="${patient_id}_results.csv"`);
+        res.sendFile(csvPath);
+      } else {
+        res.status(404).json({ message: "CSV file not found" });
+      }
+    } catch (error) {
+      console.error("Error downloading CSV:", error);
+      res.status(500).json({ message: "Failed to download CSV" });
+    }
+  });
+
+  app.get('/api/speech/download/pdf/:patient_id', authenticateToken, (req, res) => {
+    try {
+      const { patient_id } = req.params;
+      const pdfPath = path.join(process.cwd(), 'uploads', 'reports', `${patient_id}.pdf`);
+      
+      if (fs.existsSync(pdfPath)) {
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${patient_id}_report.pdf"`);
+        res.sendFile(pdfPath);
+      } else {
+        res.status(404).json({ message: "PDF file not found" });
+      }
+    } catch (error) {
+      console.error("Error downloading PDF:", error);
+      res.status(500).json({ message: "Failed to download PDF" });
+    }
+  });
+
+  // Serve reports directory
+  app.use('/uploads/reports', express.static(path.join(process.cwd(), 'uploads/reports')));
+
   const httpServer = createServer(app);
   return httpServer;
 }
