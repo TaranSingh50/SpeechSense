@@ -4,7 +4,7 @@ hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
 [nix]
 channel = "stable-25_05"
-packages = ["cargo", "libiconv", "libxcrypt", "postgresql", "rustc"]
+packages = ["cargo", "ffmpeg-full", "glibcLocales", "libiconv", "libsndfile", "libxcrypt", "pkg-config", "postgresql", "rustc", "xsimd"]
 
 [deployment]
 deploymentTarget = "autoscale"
