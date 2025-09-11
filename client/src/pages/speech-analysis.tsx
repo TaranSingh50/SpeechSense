@@ -412,24 +412,26 @@ export default function SpeechAnalysis() {
 
   const handleDownloadCSVReport = async () => {
     try {
-      if (!selectedAudio) {
+      // Use current analysis ID instead of audio file ID
+      const analysisId = currentAnalysis?.id || existingAnalysis?.id;
+      if (!analysisId) {
         toast({
-          title: "No Audio Selected",
-          description: "Please select an audio file first.",
+          title: "No Analysis Available",
+          description: "Please run AI analysis first to generate CSV report.",
           variant: "destructive",
         });
         return;
       }
 
-      const patient_id = selectedAudio.id; // Using audio file ID as patient ID
-      const response = await apiRequest("GET", `/api/speech/download/csv/${patient_id}`);
+      console.log(`📊 Downloading AI CSV for analysis: ${analysisId}`);
+      const response = await apiRequest("GET", `/api/analysis/${analysisId}/csv`);
       const blob = await response.blob();
       
       // Create blob URL and download
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${patient_id}_results.csv`;
+      link.download = `analysis-${analysisId.slice(0, 8)}-results.csv`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -437,9 +439,10 @@ export default function SpeechAnalysis() {
       
       toast({
         title: "CSV Downloaded",
-        description: "Your CSV report has been downloaded successfully.",
+        description: "Your AI-generated CSV report has been downloaded successfully.",
       });
     } catch (error) {
+      console.error("CSV download failed:", error);
       toast({
         title: "Download Failed",
         description: "CSV report not available. Please run AI analysis first.",
@@ -450,24 +453,26 @@ export default function SpeechAnalysis() {
 
   const handleDownloadPDFReport = async () => {
     try {
-      if (!selectedAudio) {
+      // Use current analysis ID instead of audio file ID
+      const analysisId = currentAnalysis?.id || existingAnalysis?.id;
+      if (!analysisId) {
         toast({
-          title: "No Audio Selected",
-          description: "Please select an audio file first.",
+          title: "No Analysis Available",
+          description: "Please run AI analysis first to generate PDF report.",
           variant: "destructive",
         });
         return;
       }
 
-      const patient_id = selectedAudio.id; // Using audio file ID as patient ID
-      const response = await apiRequest("GET", `/api/speech/download/pdf/${patient_id}`);
+      console.log(`📄 Downloading AI PDF for analysis: ${analysisId}`);
+      const response = await apiRequest("GET", `/api/analysis/${analysisId}/ai-pdf`);
       const blob = await response.blob();
       
       // Create blob URL and download
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${patient_id}_report.pdf`;
+      link.download = `analysis-${analysisId.slice(0, 8)}-ai-report.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -478,6 +483,7 @@ export default function SpeechAnalysis() {
         description: "Your AI-generated PDF report has been downloaded successfully.",
       });
     } catch (error) {
+      console.error("PDF download failed:", error);
       toast({
         title: "Download Failed",
         description: "AI report not available. Please run AI analysis first.",

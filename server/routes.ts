@@ -790,7 +790,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // File download routes
+  // Download routes for AI-generated CSV/PDF files
+  // Route 1: Download CSV using analysis ID (maps to patient ID)
+  app.get('/api/analysis/:analysisId/csv', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const analysis = await storage.getSpeechAnalysis(req.params.analysisId);
+      
+      if (!analysis || analysis.userId !== userId) {
+        return res.status(404).json({ message: "Analysis not found" });
+      }
+
+      // Get the patient ID from the analysis results
+      const analysisResults = typeof analysis.analysisResults === 'string' 
+        ? JSON.parse(analysis.analysisResults) 
+        : analysis.analysisResults;
+      
+      const patientId = analysisResults?.patientId;
+      if (!patientId) {
+        return res.status(404).json({ message: "CSV report not available. Please run AI analysis first." });
+      }
+
+      const csvPath = path.join(process.cwd(), 'uploads', 'reports', `${patientId}_results.csv`);
+      
+      if (fs.existsSync(csvPath)) {
+        console.log(`📄 Downloading AI CSV: ${csvPath}`);
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="analysis-${analysis.id.slice(0, 8)}-results.csv"`);
+        res.sendFile(csvPath);
+      } else {
+        console.log(`❌ CSV not found: ${csvPath}`);
+        res.status(404).json({ message: "CSV file not found" });
+      }
+    } catch (error) {
+      console.error("Error downloading CSV:", error);
+      res.status(500).json({ message: "Failed to download CSV" });
+    }
+  });
+
+  // Route 2: Download PDF using analysis ID (maps to patient ID) 
+  app.get('/api/analysis/:analysisId/ai-pdf', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const analysis = await storage.getSpeechAnalysis(req.params.analysisId);
+      
+      if (!analysis || analysis.userId !== userId) {
+        return res.status(404).json({ message: "Analysis not found" });
+      }
+
+      // Get the patient ID from the analysis results
+      const analysisResults = typeof analysis.analysisResults === 'string' 
+        ? JSON.parse(analysis.analysisResults) 
+        : analysis.analysisResults;
+      
+      const patientId = analysisResults?.patientId;
+      if (!patientId) {
+        return res.status(404).json({ message: "PDF report not available. Please run AI analysis first." });
+      }
+
+      const pdfPath = path.join(process.cwd(), 'uploads', 'reports', `${patientId}.pdf`);
+      
+      if (fs.existsSync(pdfPath)) {
+        console.log(`📄 Downloading AI PDF: ${pdfPath}`);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="analysis-${analysis.id.slice(0, 8)}-ai-report.pdf"`);
+        res.sendFile(pdfPath);
+      } else {
+        console.log(`❌ PDF not found: ${pdfPath}`);
+        res.status(404).json({ message: "PDF file not found" });
+      }
+    } catch (error) {
+      console.error("Error downloading PDF:", error);
+      res.status(500).json({ message: "Failed to download PDF" });
+    }
+  });
+
+  // Legacy route: File download routes (kept for backward compatibility)
   app.get('/api/speech/download/csv/:patient_id', authenticateToken, (req, res) => {
     try {
       const { patient_id } = req.params;
