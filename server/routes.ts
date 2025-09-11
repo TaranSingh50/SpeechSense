@@ -33,10 +33,14 @@ const upload = multer({
       "audio/x-m4a",     // M4A (non-standard fallback)
       "audio/m4a"        // M4A (sometimes reported by browsers)
     ];
+    
+    console.log(`File upload attempt: ${file.originalname} with MIME type: ${file.mimetype}`);
+    
     if (allowedMimes.includes(file.mimetype)) {
+      console.log(`✅ File accepted: ${file.originalname}`);
       cb(null, true);
     } else {
-      console.log(`Rejected file with MIME type: ${file.mimetype}`);
+      console.log(`❌ File rejected: ${file.originalname} with MIME type: ${file.mimetype}`);
       cb(new Error("Invalid file type. Only MP3, WAV, and M4A files are allowed."));
     }
   },
