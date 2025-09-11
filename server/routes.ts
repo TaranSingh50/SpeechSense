@@ -812,14 +812,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const csvPath = path.join(process.cwd(), 'uploads', 'reports', `${patientId}_results.csv`);
+      console.log(`🔍 Looking for CSV file: ${csvPath}`);
+      console.log(`📂 File exists: ${fs.existsSync(csvPath)}`);
       
       if (fs.existsSync(csvPath)) {
-        console.log(`📄 Downloading AI CSV: ${csvPath}`);
-        res.setHeader('Content-Type', 'text/csv');
+        console.log(`📄 Serving AI CSV file: ${csvPath}`);
+        
+        // Read file directly and send as response
+        const csvContent = fs.readFileSync(csvPath, 'utf8');
+        console.log(`📊 CSV content length: ${csvContent.length} chars`);
+        
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
         res.setHeader('Content-Disposition', `attachment; filename="analysis-${analysis.id.slice(0, 8)}-results.csv"`);
-        res.sendFile(csvPath);
+        res.setHeader('Content-Length', Buffer.byteLength(csvContent, 'utf8').toString());
+        res.end(csvContent);
       } else {
-        console.log(`❌ CSV not found: ${csvPath}`);
+        console.log(`❌ CSV file not found: ${csvPath}`);
         res.status(404).json({ message: "CSV file not found" });
       }
     } catch (error) {
@@ -849,14 +857,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const pdfPath = path.join(process.cwd(), 'uploads', 'reports', `${patientId}.pdf`);
+      console.log(`🔍 Looking for PDF file: ${pdfPath}`);
+      console.log(`📂 File exists: ${fs.existsSync(pdfPath)}`);
       
       if (fs.existsSync(pdfPath)) {
-        console.log(`📄 Downloading AI PDF: ${pdfPath}`);
+        console.log(`📄 Serving AI PDF file: ${pdfPath}`);
+        
+        // Read file as buffer and send as response
+        const pdfBuffer = fs.readFileSync(pdfPath);
+        console.log(`📊 PDF buffer size: ${pdfBuffer.length} bytes`);
+        
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="analysis-${analysis.id.slice(0, 8)}-ai-report.pdf"`);
-        res.sendFile(pdfPath);
+        res.setHeader('Content-Length', pdfBuffer.length.toString());
+        res.end(pdfBuffer);
       } else {
-        console.log(`❌ PDF not found: ${pdfPath}`);
+        console.log(`❌ PDF file not found: ${pdfPath}`);
         res.status(404).json({ message: "PDF file not found" });
       }
     } catch (error) {
