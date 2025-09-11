@@ -16,7 +16,20 @@ export function run_python_analysis(audioFilePath: string, patientId: string): P
     try {
       // Create a temporary Python script to run the analysis
       const tempScript = `
+# Suppress TensorFlow logging before any imports
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import sys
+import warnings
+warnings.filterwarnings('ignore')
+
+# Suppress TensorFlow warnings
+try:
+    import tensorflow as tf
+    tf.get_logger().setLevel('ERROR')
+except:
+    pass
+
 sys.path.append('${process.cwd()}')
 
 from app.speech.model_inference import process_audio_analysis
@@ -77,18 +90,38 @@ except Exception as e:
 
           if (code === 0 && stdout.trim()) {
             try {
-              const output = JSON.parse(stdout.trim());
-              resolve(output);
+              // Extract only JSON from stdout (filter out any debug messages)
+              const lines = stdout.trim().split('\n');
+              let jsonLine = '';
+              
+              // Find the JSON line (should start with { or [)
+              for (const line of lines) {
+                const trimmedLine = line.trim();
+                if (trimmedLine.startsWith('{') || trimmedLine.startsWith('[')) {
+                  jsonLine = trimmedLine;
+                  break;
+                }
+              }
+              
+              if (jsonLine) {
+                const output = JSON.parse(jsonLine);
+                resolve(output);
+              } else {
+                resolve({
+                  success: false,
+                  error: `No valid JSON found in Python output. Output: ${stdout}. Stderr: ${stderr}`
+                });
+              }
             } catch (parseError) {
               resolve({
                 success: false,
-                error: `Failed to parse Python output: ${parseError}`
+                error: `Failed to parse Python output: ${parseError}. Output: ${stdout}. Stderr: ${stderr}`
               });
             }
           } else {
             resolve({
               success: false,
-              error: `Python script failed with code ${code}: ${stderr}`
+              error: `Python script failed with code ${code}. Stdout: ${stdout}. Stderr: ${stderr}`
             });
           }
         } catch (error) {

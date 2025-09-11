@@ -803,8 +803,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Serve reports directory
-  app.use('/uploads/reports', express.static(path.join(process.cwd(), 'uploads/reports')));
+  // Serve reports directory with authentication (SECURITY FIX)
+  app.use('/uploads/reports', authenticateToken, express.static(path.join(process.cwd(), 'uploads/reports')));
 
   const httpServer = createServer(app);
   return httpServer;

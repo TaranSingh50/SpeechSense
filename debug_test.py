@@ -1,52 +1,27 @@
-#!/usr/bin/env python3
-"""
-Debug script to test registration endpoint directly
-"""
 
-import asyncio
+import os
 import sys
-from fastapi.testclient import TestClient
-from app.database import engine, get_db
-from app.models import User
-from sqlalchemy import select
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Suppress TensorFlow logging
+import tensorflow as tf
+tf.get_logger().setLevel('ERROR')
 
-async def test_registration():
-    """Test registration endpoint with direct database access"""
-    
-    try:
-        # Import the FastAPI app
-        from main import app
-        
-        # Create test client
-        client = TestClient(app)
-        
-        # Test registration
-        print("Testing registration endpoint...")
-        response = client.post("/api/auth/register", json={
-            "email": "debug@example.com",
-            "password": "testpassword123", 
-            "confirm_password": "testpassword123",
-            "first_name": "Debug",
-            "last_name": "User",
-            "account_type": "patient"
-        })
-        
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.text}")
-        
-        if response.status_code != 200:
-            print("Registration failed!")
-            return False
-            
-        print("Registration successful!")
-        return True
-        
-    except Exception as e:
-        print(f"Error during registration test: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
+sys.path.append('.')
+from app.speech.model_inference import process_audio_analysis
+import json
 
-if __name__ == "__main__":
-    result = asyncio.run(test_registration())
-    sys.exit(0 if result else 1)
+try:
+    results, csv_path, pdf_path = process_audio_analysis('uploads/audio/070f9189ee19788620a976dec6c7f9c0', 'test_patient')
+    output = {
+        'success': True,
+        'results': results,
+        'csv_path': csv_path,
+        'pdf_path': pdf_path
+    }
+    print(json.dumps(output))
+except Exception as e:
+    output = {
+        'success': False,
+        'error': str(e)
+    }
+    print(json.dumps(output))
+

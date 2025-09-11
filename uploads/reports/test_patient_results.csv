@@ -1,0 +1,2 @@
+Patient ID,Analysis Timestamp,Stuttering Detected,Stuttering Probability,Confidence Score,Severity Level,Fluency Rate,Speech Quality,Model Version
+test_patient,2025-09-11T04:25:46.536368,True,0.5603,0.5603,Moderate,0.4397,Needs attention,1.0
