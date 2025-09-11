@@ -96,11 +96,16 @@ def extract_audio_features(audio_file_path: str) -> np.ndarray:
         # Method 4: Use librosa as final fallback if available
         if audio_data is None:
             try:
-                import librosa
-                audio_data, sample_rate = librosa.load(audio_file_path, sr=None)
-                debug_print(f"Successfully read audio using librosa: {audio_file_path}")
+                try:
+                    import librosa
+                    audio_data, sample_rate = librosa.load(audio_file_path, sr=None)
+                    debug_print(f"Successfully read audio using librosa: {audio_file_path}")
+                except ImportError:
+                    debug_print("Librosa not available")
+                except Exception as e:
+                    debug_print(f"Librosa failed: {e}")
             except Exception as e:
-                debug_print(f"Librosa failed (not available): {e}")
+                debug_print(f"Librosa import failed: {e}")
         
         # If all methods fail, generate dummy data with warning
         if audio_data is None:
@@ -196,7 +201,7 @@ def analyze_stuttering(audio_file_path: str) -> Dict[str, Any]:
         features = extract_audio_features(audio_file_path)
         
         # Make prediction
-        if model is not None:
+        if model is not None and hasattr(model, 'predict'):
             # Suppress prediction output
             prediction = model.predict(features, verbose=0)
         else:

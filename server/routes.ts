@@ -63,17 +63,23 @@ async function performSpeechAnalysis(audioFilePath: string, duration: number) {
     
     if (aiAnalysis.success && aiAnalysis.results) {
       console.log(`🎯 REAL AI ANALYSIS COMPLETED for: ${audioFilePath}`);
-      console.log(`🧠 AI Results: Stuttering=${aiAnalysis.results.stuttering_detected}, Probability=${aiAnalysis.results.stuttering_probability}`);
+      
+      // Handle new analysis result format
+      const results = aiAnalysis.results;
+      const overallProb = results.overall_stutter_probability || 0.0;
+      const stutteringDetected = results.overall_prediction === "Stutter" || overallProb > 0.5;
+      
+      console.log(`🧠 AI Results: Stuttering=${stutteringDetected}, Probability=${overallProb}`);
       
       // Return ONLY real AI analysis results, no mock data mixing
       const realAIResults = {
         // Real AI model predictions from best_model.keras
-        stutteringDetected: aiAnalysis.results.stuttering_detected,
-        stutteringProbability: aiAnalysis.results.stuttering_probability,
-        confidenceScore: aiAnalysis.results.confidence_score,
-        severityLevel: aiAnalysis.results.severity_level,
-        fluencyRate: aiAnalysis.results.additional_metrics.fluency_rate,
-        speechQuality: aiAnalysis.results.additional_metrics.speech_quality,
+        stutteringDetected: stutteringDetected,
+        stutteringProbability: overallProb,
+        confidenceScore: overallProb, // Use probability as confidence
+        severityLevel: overallProb > 0.7 ? "Severe" : overallProb > 0.4 ? "Moderate" : overallProb > 0.2 ? "Mild" : "None",
+        fluencyRate: Math.max(0, 1 - overallProb), // Derive from stuttering probability
+        speechQuality: stutteringDetected ? "Needs attention" : "Good",
         
         // Transcription from OpenAI Whisper
         transcription,
@@ -83,18 +89,18 @@ async function performSpeechAnalysis(audioFilePath: string, duration: number) {
         pdfDownloadPath: aiAnalysis.pdf_path,
         
         // Analysis metadata
-        analysisTimestamp: aiAnalysis.results.analysis_timestamp,
-        modelVersion: aiAnalysis.results.model_version,
+        analysisTimestamp: results.analysis_timestamp,
+        modelVersion: "1.0", // Default version
         estimatedDuration: duration,
         patientId: patientId, // For downloading CSV and PDF files
         
-        // Remove all mock data - use real AI metrics only
-        fluencyScore: 10 - (aiAnalysis.results.stuttering_probability * 2), // Derive from real stuttering probability
-        stutteringEvents: Math.round(aiAnalysis.results.stuttering_probability * 5), // Derive from real data
-        speechRate: 150, // Standard rate, could be enhanced with real calculation
-        averagePauseDuration: 1.0, // Could be enhanced with real calculation 
-        confidenceLevel: aiAnalysis.results.confidence_score,
-        detectedEvents: [], // Real events would come from more detailed AI analysis
+        // Derive metrics from real AI data
+        fluencyScore: Math.max(0, 10 - (overallProb * 10)), // Scale 0-10
+        stutteringEvents: Math.round(overallProb * 10), // Estimate events
+        speechRate: 150, // Standard rate
+        averagePauseDuration: 1.0, // Standard duration
+        confidenceLevel: overallProb,
+        detectedEvents: [], // Frame data available in results.frame_data if needed
         wordCount: transcription.split(/\s+/).filter(word => word.length > 0).length,
       };
       
