@@ -13,6 +13,7 @@ import { insertAudioFileSchema, insertSpeechAnalysisSchema, insertReportSchema, 
 import { z } from "zod";
 import { generateAnalysisPDF } from "./utils/pdfGenerator";
 import { transcribeAudio } from "./utils/speechToText";
+import { run_python_analysis } from "./python_api";
 
 // Configure multer for audio file uploads
 const upload = multer({
@@ -34,22 +35,58 @@ const upload = multer({
 
 // Enhanced speech analysis with real transcription
 async function performSpeechAnalysis(audioFilePath: string, duration: number) {
-  console.log(`Starting speech analysis for file: ${audioFilePath}`);
+  console.log(`Starting AI-powered speech analysis for file: ${audioFilePath}`);
   
   try {
     // Get real transcription from audio file
     const transcription = await transcribeAudio(audioFilePath);
     console.log(`Transcription completed for: ${audioFilePath}`);
     
-    // Generate analysis based on transcription and audio characteristics
-    const analysisResults = await generateSpeechMetrics(transcription, duration, audioFilePath);
+    // Run real AI stuttering analysis using the Keras model
+    const patientId = `patient_${Date.now()}`;
+    const aiAnalysis = await run_python_analysis(audioFilePath, patientId);
     
-    console.log(`Speech analysis completed for file: ${audioFilePath}`);
-    return analysisResults;
+    if (aiAnalysis.success && aiAnalysis.results) {
+      console.log(`AI analysis completed successfully for: ${audioFilePath}`);
+      
+      // Combine transcription with AI analysis results
+      const combinedResults = {
+        // AI model results
+        stutteringDetected: aiAnalysis.results.stuttering_detected,
+        stutteringProbability: aiAnalysis.results.stuttering_probability,
+        confidenceScore: aiAnalysis.results.confidence_score,
+        severityLevel: aiAnalysis.results.severity_level,
+        fluencyRate: aiAnalysis.results.additional_metrics.fluency_rate,
+        speechQuality: aiAnalysis.results.additional_metrics.speech_quality,
+        
+        // Calculate additional metrics from transcription
+        ...await generateSpeechMetrics(transcription, duration, audioFilePath),
+        
+        // Include transcription
+        transcription,
+        
+        // File download paths
+        csvDownloadPath: aiAnalysis.csv_path,
+        pdfDownloadPath: aiAnalysis.pdf_path,
+        
+        // Analysis metadata
+        analysisTimestamp: aiAnalysis.results.analysis_timestamp,
+        modelVersion: aiAnalysis.results.model_version,
+        estimatedDuration: duration,
+        patientId: patientId, // For downloading CSV and PDF files
+      };
+      
+      return combinedResults;
+    } else {
+      console.warn(`AI analysis failed, falling back to enhanced analysis: ${aiAnalysis.error}`);
+      // Fallback to enhanced analysis if AI fails
+      const analysisResults = await generateSpeechMetrics(transcription, duration, audioFilePath);
+      return analysisResults;
+    }
     
   } catch (error) {
     console.error(`Error in speech analysis: ${error}`);
-    // Fallback to basic analysis if transcription fails
+    // Fallback to basic analysis if everything fails
     return generateFallbackAnalysis(duration);
   }
 }

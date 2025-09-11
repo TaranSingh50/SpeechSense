@@ -1,0 +1,2 @@
+Patient ID,Analysis Timestamp,Stuttering Detected,Stuttering Probability,Confidence Score,Severity Level,Fluency Rate,Speech Quality,Model Version
+test_patient_123,2025-09-11T04:19:56.282708,False,0.0337,0.9663,No stuttering detected,0.9663,Good,1.0

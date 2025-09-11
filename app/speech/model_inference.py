@@ -28,7 +28,7 @@ def load_stuttering_model():
 def extract_audio_features(audio_file_path: str) -> np.ndarray:
     """
     Extract features from audio file for model prediction
-    Using soundfile instead of librosa for compatibility
+    Creates MFCC-like features to match model input shape (None, None, 13)
     """
     try:
         # Read audio file
@@ -38,50 +38,78 @@ def extract_audio_features(audio_file_path: str) -> np.ndarray:
         if len(audio_data.shape) > 1:
             audio_data = np.mean(audio_data, axis=1)
         
-        # Basic feature extraction (simplified without librosa)
-        # You can enhance this based on your model's requirements
+        # Normalize audio
+        if np.max(np.abs(audio_data)) > 0:
+            audio_data = audio_data / np.max(np.abs(audio_data))
         
-        # Simple spectral features
-        fft = np.fft.fft(audio_data)
-        magnitude = np.abs(fft)
+        # Create MFCC-like features to match model input shape (None, None, 13)
+        # Split audio into frames
+        frame_length = 2048
+        hop_length = 512
+        n_features = 13  # Match model input shape
         
-        # Extract statistical features
-        features = []
+        # Calculate number of frames
+        n_frames = max(1, (len(audio_data) - frame_length) // hop_length + 1)
         
-        # Time domain features
-        features.extend([
-            np.mean(audio_data),
-            np.std(audio_data),
-            np.max(audio_data),
-            np.min(audio_data),
-            np.var(audio_data)
-        ])
+        # Initialize feature matrix
+        features = np.zeros((n_frames, n_features))
         
-        # Frequency domain features
-        features.extend([
-            np.mean(magnitude),
-            np.std(magnitude),
-            np.max(magnitude),
-            np.min(magnitude)
-        ])
-        
-        # Ensure we have the right number of features for your model
-        # Adjust this based on your actual model input requirements
-        features = np.array(features)
-        
-        # Pad or truncate to match model input size (adjust as needed)
-        target_length = 100  # Adjust based on your model's input shape
-        if len(features) < target_length:
-            features = np.pad(features, (0, target_length - len(features)), 'constant')
-        else:
-            features = features[:target_length]
+        for i in range(n_frames):
+            start = i * hop_length
+            end = min(start + frame_length, len(audio_data))
+            frame = audio_data[start:end]
             
-        return features.reshape(1, -1)  # Reshape for model input
+            if len(frame) == 0:
+                continue
+                
+            # Pad frame if necessary
+            if len(frame) < frame_length:
+                frame = np.pad(frame, (0, frame_length - len(frame)), 'constant')
+            
+            # Extract features for this frame
+            frame_features = []
+            
+            # Time domain features (6 features)
+            frame_features.extend([
+                np.mean(frame),
+                np.std(frame),
+                np.max(frame),
+                np.min(frame),
+                np.var(frame),
+                np.sqrt(np.mean(frame**2))  # RMS
+            ])
+            
+            # Frequency domain features (7 features)
+            fft = np.fft.fft(frame)
+            magnitude = np.abs(fft[:len(fft)//2])  # Take only positive frequencies
+            
+            if len(magnitude) > 0:
+                frame_features.extend([
+                    np.mean(magnitude),
+                    np.std(magnitude),
+                    np.max(magnitude),
+                    np.median(magnitude),
+                    np.percentile(magnitude, 25),
+                    np.percentile(magnitude, 75),
+                    np.sum(magnitude)
+                ])
+            else:
+                frame_features.extend([0.0] * 7)
+            
+            # Ensure we have exactly 13 features
+            frame_features = frame_features[:n_features]
+            while len(frame_features) < n_features:
+                frame_features.append(0.0)
+            
+            features[i] = frame_features
+        
+        # Reshape to match model input: (batch_size, time_steps, features)
+        return features.reshape(1, n_frames, n_features)
         
     except Exception as e:
         print(f"Error extracting features: {e}")
-        # Return zeros if feature extraction fails
-        return np.zeros((1, 100))
+        # Return zeros with correct shape if feature extraction fails
+        return np.zeros((1, 10, 13))
 
 def analyze_stuttering(audio_file_path: str) -> Dict[str, Any]:
     """
