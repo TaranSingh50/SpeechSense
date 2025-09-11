@@ -24,10 +24,19 @@ const upload = multer({
     fieldSize: 1024 * 1024, // 1MB field size limit
   },
   fileFilter: (req, file, cb) => {
-    const allowedMimes = ["audio/mpeg", "audio/wav", "audio/mp4", "audio/x-m4a"];
+    const allowedMimes = [
+      "audio/mpeg",      // MP3 (standard)
+      "audio/mp3",       // MP3 (non-standard but common in some browsers)
+      "audio/wav",       // WAV (standard)
+      "audio/x-wav",     // WAV (Firefox and some other browsers)
+      "audio/mp4",       // M4A (standard)
+      "audio/x-m4a",     // M4A (non-standard fallback)
+      "audio/m4a"        // M4A (sometimes reported by browsers)
+    ];
     if (allowedMimes.includes(file.mimetype)) {
       cb(null, true);
     } else {
+      console.log(`Rejected file with MIME type: ${file.mimetype}`);
       cb(new Error("Invalid file type. Only MP3, WAV, and M4A files are allowed."));
     }
   },

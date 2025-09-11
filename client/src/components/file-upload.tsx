@@ -113,9 +113,18 @@ export function FileUpload() {
   };
 
   const handleFile = (file: File) => {
-    // Validate file type
-    const allowedTypes = ['audio/mpeg', 'audio/wav', 'audio/mp4', 'audio/x-m4a'];
+    // Validate file type - include browser-specific MIME types
+    const allowedTypes = [
+      'audio/mpeg',      // MP3 (standard)
+      'audio/mp3',       // MP3 (non-standard but common in some browsers)
+      'audio/wav',       // WAV (standard)
+      'audio/x-wav',     // WAV (Firefox and some other browsers)
+      'audio/mp4',       // M4A (standard)
+      'audio/x-m4a',     // M4A (non-standard fallback)
+      'audio/m4a'        // M4A (sometimes reported by browsers)
+    ];
     if (!allowedTypes.includes(file.type)) {
+      console.log(`Rejected file with type: ${file.type}, name: ${file.name}`);
       toast({
         title: "Invalid file type",
         description: "Please upload an MP3, WAV, or M4A audio file.",
