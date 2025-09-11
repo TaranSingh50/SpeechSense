@@ -204,6 +204,8 @@ def analyze_stuttering(audio_file_path: str) -> Dict[str, Any]:
         if model is not None and hasattr(model, 'predict'):
             # Suppress prediction output
             prediction = model.predict(features, verbose=0)
+            # Apply sigmoid activation to convert logits to probabilities
+            prediction = tf.nn.sigmoid(prediction).numpy()
         else:
             # Fallback prediction if model fails to load - generate sample frame predictions
             n_frames = features.shape[1] if len(features.shape) > 1 else 50
@@ -224,6 +226,8 @@ def analyze_stuttering(audio_file_path: str) -> Dict[str, Any]:
             for i, frame_pred in enumerate(frame_predictions):
                 timestamp = round(i * time_step, 3)
                 frame_prob = float(frame_pred)
+                # Ensure probability is between 0 and 1
+                frame_prob = np.clip(frame_prob, 0.0, 1.0)
                 frame_prediction = 1.0 if frame_prob > 0.5 else 0.0
                 
                 frame_data.append({
