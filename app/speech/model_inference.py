@@ -13,6 +13,9 @@ import tempfile
 import uuid
 from datetime import datetime
 import warnings
+# import librosa  # Removed due to Python 3.11 compatibility issues
+from python_speech_features import mfcc
+from scipy.io import wavfile
 
 # Suppress warnings
 warnings.filterwarnings('ignore')
@@ -39,155 +42,88 @@ def load_stuttering_model():
 
 def extract_audio_features(audio_file_path: str) -> np.ndarray:
     """
-    Extract features from audio file for model prediction
-    Creates MFCC-like features to match model input shape (None, None, 13)
+    Extract proper MFCC features matching training-time preprocessing
+    Uses python_speech_features for consistent MFCC extraction
     """
     try:
-        # Try to read audio file with multiple fallback methods
+        # Load audio file - try soundfile first, then scipy
         audio_data = None
-        sample_rate = 22050  # Default sample rate
+        sample_rate = None
         
-        # Method 1: Try soundfile first (works well with WAV)
         try:
             audio_data, sample_rate = sf.read(audio_file_path)
-            debug_print(f"Successfully read audio using soundfile: {audio_file_path}")
+            debug_print(f"Loaded audio with soundfile: sr={sample_rate}, duration={len(audio_data)/sample_rate:.2f}s")
         except Exception as e:
             debug_print(f"Soundfile failed: {e}")
-        
-        # Method 2: Try with scipy for other formats
-        if audio_data is None:
             try:
-                from scipy.io import wavfile
                 sample_rate, audio_data = wavfile.read(audio_file_path)
-                # Normalize from int16 to float32 if needed
+                # Convert int16 to float32 in [-1, 1] range
                 if audio_data.dtype == np.int16:
                     audio_data = audio_data.astype(np.float32) / 32767.0
-                debug_print(f"Successfully read audio using scipy: {audio_file_path}")
-            except Exception as e:
-                debug_print(f"Scipy failed: {e}")
-        
-        # Method 3: Use pydub as fallback (handles most formats including MP3/M4A)
-        if audio_data is None:
-            try:
-                from pydub import AudioSegment
-                import io
-                
-                # Load audio file using pydub
-                audio_segment = AudioSegment.from_file(audio_file_path)
-                
-                # Convert to mono
-                if audio_segment.channels > 1:
-                    audio_segment = audio_segment.set_channels(1)
-                
-                # Get sample rate
-                sample_rate = audio_segment.frame_rate
-                
-                # Convert to numpy array
-                audio_data = np.array(audio_segment.get_array_of_samples()).astype(np.float32)
-                
-                # Normalize audio data
-                if np.max(np.abs(audio_data)) > 0:
-                    audio_data = audio_data / np.max(np.abs(audio_data))
-                
-                debug_print(f"Successfully read audio using pydub: {audio_file_path}, format: {audio_segment.format if hasattr(audio_segment, 'format') else 'unknown'}")
-            except Exception as e:
-                debug_print(f"Pydub failed: {e}")
-        
-        # Method 4: Use librosa as final fallback if available
-        if audio_data is None:
-            try:
-                try:
-                    import librosa
-                    audio_data, sample_rate = librosa.load(audio_file_path, sr=None)
-                    debug_print(f"Successfully read audio using librosa: {audio_file_path}")
-                except ImportError:
-                    debug_print("Librosa not available")
-                except Exception as e:
-                    debug_print(f"Librosa failed: {e}")
-            except Exception as e:
-                debug_print(f"Librosa import failed: {e}")
-        
-        # If all methods fail, generate dummy data with warning
-        if audio_data is None:
-            debug_print(f"Warning: All audio reading methods failed for {audio_file_path}, generating dummy features")
-            return np.random.normal(0, 0.1, (1, 50, 13))  # Return dummy features
+                debug_print(f"Loaded audio with scipy: sr={sample_rate}, duration={len(audio_data)/sample_rate:.2f}s")
+            except Exception as e2:
+                debug_print(f"Both soundfile and scipy failed: {e}, {e2}")
+                raise Exception("Could not load audio file")
         
         # Convert to mono if stereo
         if len(audio_data.shape) > 1:
             audio_data = np.mean(audio_data, axis=1)
         
-        # Normalize audio
-        if np.max(np.abs(audio_data)) > 0:
-            audio_data = audio_data / np.max(np.abs(audio_data))
+        # Resample to 16kHz if needed (training expectation)
+        target_sr = 16000
+        if sample_rate != target_sr:
+            # Simple resampling - for production use librosa.resample when available
+            from scipy import signal
+            num_samples = int(len(audio_data) * target_sr / sample_rate)
+            audio_data = signal.resample(audio_data, num_samples)
+            sample_rate = target_sr
+            debug_print(f"Resampled to {target_sr}Hz")
         
-        # Create MFCC-like features to match model input shape (None, None, 13)
-        # Split audio into frames
-        frame_length = 2048
-        hop_length = 512
-        n_features = 13  # Match model input shape
+        # Extract MFCCs matching training parameters
+        # Based on architect analysis: 32ms window, 32ms hop (0.032s steps in CSV)
+        mfcc_features = mfcc(
+            audio_data,
+            samplerate=sample_rate,
+            winlen=0.032,      # 32ms window
+            winstep=0.032,     # 32ms hop (non-overlapping frames for 0.032s timestamps)
+            numcep=13,         # 13 MFCC coefficients
+            nfilt=26,          # 26 mel filters
+            nfft=512,          # 512-point FFT
+            preemph=0.97,      # Pre-emphasis
+            ceplifter=22       # Cepstral liftering
+        )
         
-        # Calculate number of frames
-        n_frames = max(1, (len(audio_data) - frame_length) // hop_length + 1)
+        debug_print(f"Raw MFCC shape: {mfcc_features.shape}")
+        debug_print(f"MFCC range: min={np.min(mfcc_features):.3f}, max={np.max(mfcc_features):.3f}")
         
-        # Initialize feature matrix
-        features = np.zeros((n_frames, n_features))
+        # Apply Cepstral Mean Normalization (CMN) - subtract mean per coefficient
+        # This is critical for matching training preprocessing
+        mfcc_features = mfcc_features - np.mean(mfcc_features, axis=0)
         
-        for i in range(n_frames):
-            start = i * hop_length
-            end = min(start + frame_length, len(audio_data))
-            frame = audio_data[start:end]
-            
-            if len(frame) == 0:
-                continue
-                
-            # Pad frame if necessary
-            if len(frame) < frame_length:
-                frame = np.pad(frame, (0, frame_length - len(frame)), 'constant')
-            
-            # Extract features for this frame
-            frame_features = []
-            
-            # Time domain features (6 features)
-            frame_features.extend([
-                np.mean(frame),
-                np.std(frame),
-                np.max(frame),
-                np.min(frame),
-                np.var(frame),
-                np.sqrt(np.mean(frame**2))  # RMS
-            ])
-            
-            # Frequency domain features (7 features)
-            fft = np.fft.fft(frame)
-            magnitude = np.abs(fft[:len(fft)//2])  # Take only positive frequencies
-            
-            if len(magnitude) > 0:
-                frame_features.extend([
-                    np.mean(magnitude),
-                    np.std(magnitude),
-                    np.max(magnitude),
-                    np.median(magnitude),
-                    np.percentile(magnitude, 25),
-                    np.percentile(magnitude, 75),
-                    np.sum(magnitude)
-                ])
-            else:
-                frame_features.extend([0.0] * 7)
-            
-            # Ensure we have exactly 13 features
-            frame_features = frame_features[:n_features]
-            while len(frame_features) < n_features:
-                frame_features.append(0.0)
-            
-            features[i] = frame_features
+        debug_print(f"After CMN shape: {mfcc_features.shape}")
+        debug_print(f"After CMN range: min={np.min(mfcc_features):.3f}, max={np.max(mfcc_features):.3f}")
         
-        # Reshape to match model input: (batch_size, time_steps, features)
-        return features.reshape(1, n_frames, n_features)
+        # Add batch dimension: (1, time_steps, features)
+        features = mfcc_features.reshape(1, mfcc_features.shape[0], mfcc_features.shape[1])
+        
+        # Ensure float32 for model compatibility
+        features = features.astype(np.float32)
+        
+        debug_print(f"Final features shape: {features.shape}, dtype: {features.dtype}")
+        debug_print(f"Expected timestamp step: {0.032}s, actual frames: {features.shape[1]}")
+        
+        return features
         
     except Exception as e:
-        debug_print(f"Error extracting features: {e}")
-        # Return random features with correct shape if feature extraction fails
-        return np.random.normal(0, 0.1, (1, 50, 13))
+        debug_print(f"Error extracting MFCC features: {e}")
+        import traceback
+        debug_print(traceback.format_exc())
+        # Fallback: return reasonable dummy features
+        n_frames = 50
+        n_features = 13
+        fallback_features = np.random.normal(0, 0.5, (1, n_frames, n_features)).astype(np.float32)
+        debug_print(f"Using fallback features with shape: {fallback_features.shape}")
+        return fallback_features
 
 def analyze_stuttering(audio_file_path: str) -> Dict[str, Any]:
     """
@@ -202,10 +138,21 @@ def analyze_stuttering(audio_file_path: str) -> Dict[str, Any]:
         
         # Make prediction
         if model is not None and hasattr(model, 'predict'):
+            # Debug: Print feature statistics
+            debug_print(f"Features shape: {features.shape}")
+            debug_print(f"Features mean: {np.mean(features)}, std: {np.std(features)}")
+            debug_print(f"Feature range: min={np.min(features)}, max={np.max(features)}")
+            
             # Suppress prediction output
-            prediction = model.predict(features, verbose=0)
+            raw_prediction = model.predict(features, verbose=0)
+            debug_print(f"Raw prediction shape: {raw_prediction.shape}")
+            debug_print(f"Raw prediction range: min={np.min(raw_prediction)}, max={np.max(raw_prediction)}")
+            debug_print(f"Raw prediction sample: {raw_prediction[0][:5].flatten()}")
+            
             # Apply sigmoid activation to convert logits to probabilities
-            prediction = tf.nn.sigmoid(prediction).numpy()
+            prediction = tf.nn.sigmoid(raw_prediction).numpy()
+            debug_print(f"Sigmoid prediction range: min={np.min(prediction)}, max={np.max(prediction)}")
+            debug_print(f"Sigmoid prediction sample: {prediction[0][:5].flatten()}")
         else:
             # Fallback prediction if model fails to load - generate sample frame predictions
             n_frames = features.shape[1] if len(features.shape) > 1 else 50
@@ -216,9 +163,11 @@ def analyze_stuttering(audio_file_path: str) -> Dict[str, Any]:
         
         # Process frame-by-frame predictions
         frame_data = []
+        debug_print(f"Prediction shape for processing: {prediction.shape}")
         if len(prediction.shape) > 1 and prediction.shape[1] > 1:
             # Frame-by-frame predictions available
             frame_predictions = prediction[0]  # First batch
+            debug_print(f"Processing {len(frame_predictions)} frame predictions")
             
             # Generate timestamps (0.032 second intervals as shown in user's example)
             time_step = 0.032

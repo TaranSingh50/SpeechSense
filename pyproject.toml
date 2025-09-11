@@ -21,6 +21,7 @@ dependencies = [
     "python-dotenv>=1.1.1",
     "python-jose>=3.5.0",
     "python-multipart>=0.0.20",
+    "python-speech-features>=0.6",
     "scipy>=1.16.1",
     "soundfile>=0.13.1",
     "sqlalchemy>=2.0.41",
